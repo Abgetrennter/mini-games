@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-page-node-id="F8egcyxfM5gTEBqxjMyIIb">
-<head data-page-node-id="BhVzVfQODcyIhkb81MsOu1">
-<meta charset="utf-8" data-page-node-id="IY8ZA5j1G8hMvVN1VRVjnm">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" data-page-node-id="oyVniehPTdKqRsGYthvTtt">
-<meta name="apple-mobile-web-app-capable" content="yes" data-page-node-id="lncpLALrQMxaEPXzbXnJff">
-<meta name="mobile-web-app-capable" content="yes" data-page-node-id="FLGLEhBP7TeOfxf8dyjMap">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" data-page-node-id="OQapJeBWSO1F0HcGSrLLDm">
-<meta name="apple-mobile-web-app-title" content="箭头脱出" data-page-node-id="ZD3q16ORaFNlbpIA7F9gVA">
-<meta name="theme-color" content="#0d1420" data-page-node-id="mJ3aigOdsJ5UtT64YIYUfh">
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="箭头脱出">
+<meta name="theme-color" content="#0d1420">
 <title>箭头脱出</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
@@ -86,50 +86,50 @@
   .card button.pri{background:#3b82f6;color:#fff}
 </style>
 </head>
-<body data-page-node-id="YeaMvPlK6HmDIlwwqItj2m">
-<div id="app" data-page-node-id="ZhMgBM7ifYGaAfsaJWlMty">
-  <header data-page-node-id="p0JPQCmrHHVoq2FeOxXTyl">
-    <div class="title" data-page-node-id="aIGgyKUscSNvUjCw6Vcycs">箭头脱出<small id="sub" data-page-node-id="JT1ZBf8npgj35SSEsygQAV">像蛇一样沿箭头滑出</small></div>
-    <div class="right" data-page-node-id="efI2x7UI5LMwfG0HHw1BrI">
-      <div class="stats" data-page-node-id="kFX3pssvVi2XJgzaSh9kUe">
-        <div class="stat" data-page-node-id="MByF7g0PDU4JPxskON9qKz"><b id="left" data-page-node-id="ZV5rlZAfVIgYXhX4qEf0GR">0</b><span data-page-node-id="NBmcdawC8BWpz3qNlPrt2E">剩余</span></div>
-        <div class="stat" data-page-node-id="Dit7YBzNWuttfXsQVOTgur"><b id="mv" data-page-node-id="k8PN8q76F5wtX9NzOJssGp">0</b><span data-page-node-id="1ejFDfmes1egajZT0wkhyu">步数</span></div>
+<body>
+<div id="app">
+  <header>
+    <div class="title">箭头脱出<small id="sub">像蛇一样沿箭头滑出</small></div>
+    <div class="right">
+      <div class="stats">
+        <div class="stat"><b id="left">0</b><span>剩余</span></div>
+        <div class="stat"><b id="mv">0</b><span>步数</span></div>
       </div>
-      <button class="sndbtn" id="snd" title="音效" data-page-node-id="o3xsLkiZDfpNJoCeqo4Ctp">♪</button>
+      <button class="sndbtn" id="snd" title="音效">♪</button>
     </div>
   </header>
 
-  <div class="chips" id="chips" data-page-node-id="XXQEE2Knnv8AjXsCirnhXd">
-    <button data-i="0" data-page-node-id="ZiclLzSmTF3XIqC8J7RAjt">简单</button>
-    <button data-i="1" data-page-node-id="KQcfecFQ3GFESDLV0NqgOq">普通</button>
-    <button data-i="2" data-page-node-id="F59oZIxZQkv7Za9OOv9iXY">困难</button>
-    <button data-i="3" data-page-node-id="MUeI3GbLsDk4zcX6z8J2Pf">地狱</button>
+  <div class="chips" id="chips">
+    <button data-i="0">简单</button>
+    <button data-i="1">普通</button>
+    <button data-i="2">困难</button>
+    <button data-i="3">地狱</button>
   </div>
 
-  <div id="wrap" data-page-node-id="3e53agNz561Paog94hfVZl"><canvas id="cv" data-page-node-id="uyS2F6Oo08uHDpAkv1EGgd"></canvas></div>
+  <div id="wrap"><canvas id="cv"></canvas></div>
 
-  <footer data-page-node-id="psHd2knC9b4JcoNBES0bBB">
-    <button id="undo" data-page-node-id="CUR2Xqc6MMXXDQtNnrc5E6">撤销</button>
-    <button id="hint" data-page-node-id="VQbdCZ6vg9Lntcr3FGemqF">提示</button>
-    <button id="reset" data-page-node-id="zxwnoGaLm8G2Pso16Vesqx">重开</button>
-    <button id="new" data-page-node-id="q6a3G0TTnv178TdF5QPEGc">新关</button>
+  <footer>
+    <button id="undo">撤销</button>
+    <button id="hint">提示</button>
+    <button id="reset">重开</button>
+    <button id="new">新关</button>
   </footer>
 
-  <div id="mask" data-page-node-id="3wJqiKnavRI43Cip4QpibS">
-    <div class="card" data-page-node-id="yEDWEQqm0GJeTVhDpM2fKa">
-      <h2 id="mt" data-page-node-id="CiILBiYGSCeBVKEgGy1lke">全部脱出</h2>
-      <p id="mp" data-page-node-id="Gx2gMAKLUkr9MoGRmNEMau">用了 0 步</p>
-      <div class="row" data-page-node-id="sj6tajd7J21GIVKWPupmnF">
-        <button id="again" data-page-node-id="lo5tV4LygJ4E8on5HogRbE">再来一局</button>
-        <button id="next" class="pri" data-page-node-id="EIKQXz1CH9K8yr1wCKK17L">下一关</button>
+  <div id="mask">
+    <div class="card">
+      <h2 id="mt">全部脱出</h2>
+      <p id="mp">用了 0 步</p>
+      <div class="row">
+        <button id="again">再来一局</button>
+        <button id="next" class="pri">下一关</button>
       </div>
     </div>
   </div>
 </div>
 
-<div id="rotate" data-page-node-id="YLyyTRiyfASTTUrFbkynXs">
-  <div class="ic" data-page-node-id="1Meb2bxWFLINbB3VbjfBMD"></div>
-  <p data-page-node-id="e9U0vgjEd8eRFSzhR894oe">请把手机竖过来</p>
+<div id="rotate">
+  <div class="ic"></div>
+  <p>请把手机竖过来</p>
 </div>
 
 <script>
@@ -139,11 +139,12 @@
   /* ---------- 常量 ---------- */
   var DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // 0上 1右 2下 3左
   var PAL = ['#38bdf8', '#fbbf24', '#a78bfa', '#fb7185', '#34d399', '#f472b6', '#60a5fa', '#facc15'];
+  // cover 设到超过算法极限，等价于「尽力填满」；实际密度由可放置性决定
   var LEVELS = [
-    { name: '简单', R: 6, C: 6, cover: 0.62, minLen: 2, maxLen: 4, tries: 8 },
-    { name: '普通', R: 7, C: 7, cover: 0.68, minLen: 3, maxLen: 5, tries: 12 },
-    { name: '困难', R: 8, C: 8, cover: 0.74, minLen: 3, maxLen: 6, tries: 14 },
-    { name: '地狱', R: 9, C: 9, cover: 0.78, minLen: 3, maxLen: 7, tries: 12 }
+    { name: '简单', R: 8, C: 8, cover: 0.92, minLen: 2, maxLen: 4, tries: 12 },
+    { name: '普通', R: 10, C: 10, cover: 0.92, minLen: 3, maxLen: 5, tries: 12 },
+    { name: '困难', R: 12, C: 12, cover: 0.92, minLen: 3, maxLen: 6, tries: 12 },
+    { name: '地狱', R: 14, C: 14, cover: 0.92, minLen: 3, maxLen: 7, tries: 12 }
   ];
   var KEY = 'arrowlines.v2';
 
@@ -261,37 +262,39 @@
     if (!ok.length) return null;
     return ok[(Math.random() * ok.length) | 0];
   }
-  function pickStart(g, hot) {
-    var tot = 0, i;
-    for (i = 0; i < R * C; i++) if (g[i] === -1) tot += 1 + hot[i] * 5;
-    if (tot <= 0) return (Math.random() * R * C) | 0;
-    var t = Math.random() * tot;
-    for (i = 0; i < R * C; i++) {
-      if (g[i] !== -1) continue;
-      t -= 1 + hot[i] * 5;
-      if (t <= 0) return i;
-    }
-    return (Math.random() * R * C) | 0;
-  }
   function build(L) {
     var g = new Array(R * C), hot = new Array(R * C), i, j;
     for (i = 0; i < g.length; i++) { g[i] = -1; hot[i] = 0; }
-    var ps = [], filled = 0, target = Math.round(R * C * L.cover), tries = 0;
-    while (filled < target && tries < 3000) {
-      tries++;
-      var start = pickStart(g, hot);
-      if (g[start] !== -1) continue;
-      var len = L.minLen + ((Math.random() * (L.maxLen - L.minLen + 1)) | 0);
-      var path = walk(start, len, g);
-      if (!path) continue;
-      var pl = orient(path, g);
-      if (!pl) continue;
-      var id = ps.length;
-      for (j = 0; j < pl.cells.length; j++) g[pl.cells[j]] = id;
-      var ray = rayOf(headOf(pl), pl.dir);
-      for (j = 0; j < ray.length; j++) hot[ray[j]]++;
-      ps.push({ cells: pl.cells, dir: pl.dir });
-      filled += pl.cells.length;
+    var ps = [], filled = 0, target = Math.round(R * C * L.cover), guard = 0;
+    // 扫描式填充：每轮遍历剩余空格（按 hot 加权随机排序）逐个尝试，长度不够就逐级缩短到 1
+    while (filled < target && guard++ < 60) {
+      var empties = [], k;
+      for (k = 0; k < R * C; k++) if (g[k] === -1) empties.push(k);
+      if (!empties.length) break;
+      empties.sort(function (a, b) {
+        return (1 + hot[b] * 3) * Math.random() - (1 + hot[a] * 3) * Math.random();
+      });
+      var placedAny = false;
+      for (var e = 0; e < empties.length; e++) {
+        var start = empties[e];
+        if (g[start] !== -1 || filled >= target) continue;
+        var want = L.minLen + ((Math.random() * (L.maxLen - L.minLen + 1)) | 0);
+        for (var len = want; len >= 1; len--) {
+          var path = walk(start, len, g);
+          if (!path) continue;
+          var pl = orient(path, g);
+          if (!pl) continue;
+          var id = ps.length;
+          for (j = 0; j < pl.cells.length; j++) g[pl.cells[j]] = id;
+          var ray = rayOf(headOf(pl), pl.dir);
+          for (j = 0; j < ray.length; j++) hot[ray[j]]++;
+          ps.push({ cells: pl.cells, dir: pl.dir });
+          filled += pl.cells.length;
+          placedAny = true;
+          break;
+        }
+      }
+      if (!placedAny) break;
     }
     return ps;
   }
@@ -318,14 +321,16 @@
       stack[k] = 0; memo[k] = m;
       return m;
     }
-    var free = 0, maxD = 0, sumD = 0;
+    var free = 0, maxD = 0, sumD = 0, cells = 0;
     for (i = 0; i < ps.length; i++) {
       var d = depth(i);
       if (d === 0) free++;
       if (d > maxD) maxD = d;
       sumD += d;
+      cells += ps[i].cells.length;
     }
-    return (ps.length ? sumD / ps.length : 0) + 0.32 * maxD - 0.06 * free;
+    var dens = cells / (R * C);
+    return (ps.length ? sumD / ps.length : 0) + 0.32 * maxD - 0.35 * free + 4 * dens;
   }
   function generate(L) {
     var best = null, bestS = -1e9, t;
@@ -442,7 +447,7 @@
   function layout() {
     var pad = 12;
     cell = Math.min((W - pad * 2) / C, (H - pad * 2) / R);
-    cell = clamp(cell, 20, 74);
+    cell = clamp(cell, 14, 74);
     ox = (W - cell * C) / 2;
     oy = (H - cell * R) / 2;
   }
@@ -523,6 +528,11 @@
     var tip = P[P.length - 1], prev = P[P.length - 2] || tip;
     var vx = tip.x - prev.x, vy = tip.y - prev.y, len = Math.sqrt(vx * vx + vy * vy);
     if (len > 0.5) { dx = vx / len; dy = vy / len; }
+    // 单格线：点退化成一小段，方向由箭头决定，避免只看得到一个圆点
+    if (maxX - minX < 1 && maxY - minY < 1) {
+      P = [{ x: tip.x - dx * cell * 0.30, y: tip.y - dy * cell * 0.30 }, tip];
+      minX = P[0].x; maxX = tip.x; minY = P[0].y; maxY = tip.y;
+    }
 
     g.save();
     if (opt.dx || opt.dy) g.translate(opt.dx || 0, opt.dy || 0);
@@ -959,6 +969,7 @@
     get R() { return R; }, get C() { return C; },
     get moves() { return moves; }, get won() { return won; },
     get alive() { return aliveCount(); }, get flying() { return flying.length; },
+    get cell() { return cell; }, get ox() { return ox; }, get oy() { return oy; },
     canGo: canGo, launch: launch, undo: undo, reset: reset, hint: hint,
     newGame: newGame, tap: onTap, resize: resize, sample: sample,
     rayOf: rayOf, escapeInfo: escapeInfo, buildTrail: buildTrail,
