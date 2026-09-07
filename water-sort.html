@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="试管倒水">
+<meta name="theme-color" content="#0d1420">
+<title>试管倒水</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#0d1420}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    color:#e8eef7;
+    -webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+  }
+  #app{
+    position:relative;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:radial-gradient(120% 80% at 50% 0%,#1b2740 0%,#0d1420 62%);
+  }
+  header{
+    flex:0 0 auto;
+    padding:14px 16px 8px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .title{font-size:17px;font-weight:600;letter-spacing:1px}
+  .title small{display:block;font-size:11px;font-weight:400;color:#7c8ba3;letter-spacing:0;margin-top:2px}
+  .stats{display:flex;align-items:center;gap:14px}
+  .stat{text-align:right;line-height:1.1}
+  .stat b{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:10px;color:#7c8ba3;margin-top:1px}
+  #tgtw{display:none}
+  #tgt{
+    display:inline-block;width:15px;height:15px;border-radius:50%;
+    box-shadow:0 0 0 2px rgba(255,255,255,.22),0 0 10px currentColor;
+    vertical-align:middle;
+  }
+  .chips{flex:0 0 auto;display:flex;gap:8px;padding:0 16px 8px}
+  #modes{padding-top:0}
+  .chips button{
+    flex:1;padding:7px 0;font-size:12px;font-family:inherit;color:#8fa1bb;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+    border-radius:999px;cursor:pointer;transition:.18s;
+  }
+  .chips button.on{background:rgba(59,130,246,.22);border-color:rgba(59,130,246,.55);color:#cfe0ff}
+  #wrap{flex:1 1 auto;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  footer{
+    flex:0 0 auto;display:flex;gap:7px;padding:10px 14px 16px;
+  }
+  footer button{
+    flex:1;padding:13px 0;font-size:13px;font-family:inherit;color:#dce6f5;
+    background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+    border-radius:12px;cursor:pointer;transition:.15s;
+  }
+  footer button:active{background:rgba(255,255,255,.16)}
+  footer button:disabled{opacity:.35;cursor:default}
+  #rotate{
+    position:fixed;inset:0;z-index:50;display:none;
+    align-items:center;justify-content:center;flex-direction:column;gap:14px;
+    background:#0d1420;text-align:center;padding:24px;
+  }
+  #rotate .ic{width:54px;height:84px;border:2px solid #4a5a75;border-radius:10px;position:relative}
+  #rotate .ic::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:12px;margin:-6px 0 0 -13px;border:2px solid #4a5a75;border-radius:3px}
+  #rotate p{font-size:15px;color:#9fb0c8}
+  #mask{
+    position:absolute;inset:0;z-index:20;display:none;
+    align-items:center;justify-content:center;background:rgba(9,14,23,.82);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  }
+  #mask.show{display:flex}
+  .card{text-align:center;padding:28px 30px;border-radius:20px;background:#151f31;border:1px solid rgba(255,255,255,.1);min-width:238px}
+  .card h2{font-size:20px;font-weight:600;margin-bottom:6px}
+  .card p{font-size:13px;color:#8fa1bb;margin-bottom:20px}
+  .card .row{display:flex;gap:10px}
+  .card button{
+    flex:1;padding:11px 0;font-size:14px;font-family:inherit;border-radius:11px;cursor:pointer;border:none;
+    background:rgba(255,255,255,.1);color:#dce6f5;
+  }
+  .card button.pri{background:#3b82f6;color:#fff}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="title">试管倒水<small id="sub">把同色水倒进同一支管</small></div>
+    <div class="stats">
+      <div class="stat" id="tgtw"><b id="tgt"></b><span>目标色</span></div>
+      <div class="stat"><b id="mv">0</b><span>步数</span></div>
+      <div class="stat"><b id="lv">6</b><span>颜色</span></div>
+    </div>
+  </header>
+
+  <div class="chips" id="chips">
+    <button data-c="4">简单</button>
+    <button data-c="6">普通</button>
+    <button data-c="8">困难</button>
+    <button data-c="10">地狱</button>
+  </div>
+
+  <div class="chips" id="modes">
+    <button data-m="classic">经典</button>
+    <button data-m="giant">巨管模式</button>
+  </div>
+
+  <div id="wrap"><canvas id="c"></canvas></div>
+
+  <footer>
+    <button id="undo">撤销</button>
+    <button id="reset">重开</button>
+    <button id="new">新关</button>
+    <button id="add">加管</button>
+    <button id="snd">音效开</button>
+  </footer>
+
+  <div id="mask">
+    <div class="card">
+      <h2 id="wt">完成！</h2>
+      <p id="wp">用了 0 步</p>
+      <div class="row">
+        <button id="wagain">再来一次</button>
+        <button id="wnext" class="pri">下一关</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="rotate">
+  <div class="ic"></div>
+  <p>请把手机竖过来游玩</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var CAP = 4;        // 普通试管容量
+  var GCAP = 8;       // 巨管容量
+  var MAX_EXTRA = 3;  // 每关最多额外加几支空管
+  var KEY = 'watersort.v2';
+  var PALETTE = [
+    '#ef4444', '#f97316', '#facc15', '#a3e635', '#22c55e', '#14b8a6',
+    '#06b6d4', '#3b82f6', '#6366f1', '#a855f7', '#ec4899', '#94a3b8'
+  ];
+
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var wrap = document.getElementById('wrap');
+  var elMv = document.getElementById('mv');
+  var elLv = document.getElementById('lv');
+  var elMask = document.getElementById('mask');
+  var elWt = document.getElementById('wt');
+  var elWp = document.getElementById('wp');
+  var elRotate = document.getElementById('rotate');
+  var btnUndo = document.getElementById('undo');
+  var btnSnd = document.getElementById('snd');
+  var btnAdd = document.getElementById('add');
+  var elTgtw = document.getElementById('tgtw');
+  var elTgt = document.getElementById('tgt');
+  var elSub = document.getElementById('sub');
+
+  var W = 0, H = 0, DPR = 1;
+  var tubes = [];
+  var caps = [];        // 每支管的容量，与 tubes 平行
+  var levelStart = [];
+  var history = [];
+  var moves = 0;
+  var colorCount = 6;
+  var selected = -1;
+  var anim = null;
+  var won = false;
+  var pos = [];
+  var sizes = [];       // 每支管的 {w,h}，与 tubes 平行
+  var tubeW = 56, tubeH = 210;
+  var mode = 'classic'; // 'classic' | 'giant'
+  var giantIdx = -1;    // 巨管在 tubes 中的下标，-1 表示本关没有巨管
+  var targetColor = -1; // 巨管指定的颜色
+  var extraUsed = 0;    // 本关已加的空管数
+  var shake = null;     // {i,t0} 非法操作时的抖动反馈
+  var confetti = [];
+  var soundOn = true;
+
+  /* ---------- helpers ---------- */
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function easeOut(t) { return 1 - Math.pow(1 - t, 3); }
+  function easeInOut(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+  function lighten(hex, a) {
+    var n = parseInt(hex.slice(1), 16);
+    var r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    r = Math.round(r + (255 - r) * a); g = Math.round(g + (255 - g) * a); b = Math.round(b + (255 - b) * a);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  }
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0, t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  function rr(g, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.arcTo(x + w, y, x + w, y + h, r);
+    g.arcTo(x + w, y + h, x, y + h, r);
+    g.arcTo(x, y + h, x, y, r);
+    g.arcTo(x, y, x + w, y, r);
+    g.closePath();
+  }
+
+  /* ---------- sound ---------- */
+  var actx = null;
+  function ac() {
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; }
+    }
+    if (actx && actx.state === 'suspended') { try { actx.resume(); } catch (e) {} }
+    return actx;
+  }
+  function beep(o) {
+    if (!soundOn) return;
+    var a = ac(); if (!a) return;
+    var dur = o.dur || 0.12, vol = o.vol || 0.16, t0 = a.currentTime;
+    var osc = a.createOscillator(), gain = a.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(o.freq, t0);
+    if (o.to) osc.frequency.exponentialRampToValueAtTime(Math.max(40, o.to), t0 + dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain); gain.connect(a.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+  var SFX = {
+    pick: function () { beep({ freq: 660, dur: 0.07, vol: 0.1, type: 'triangle' }); },
+    pour: function () { beep({ freq: 300, to: 520, dur: 0.26, vol: 0.13, type: 'sine' }); },
+    bad: function () { beep({ freq: 150, to: 100, dur: 0.14, vol: 0.11, type: 'sawtooth' }); },
+    done: function () { beep({ freq: 880, dur: 0.14, vol: 0.12, type: 'triangle' }); },
+    win: function () {
+      var f = [523, 659, 784, 1047];
+      for (var i = 0; i < f.length; i++) {
+        (function (i) { setTimeout(function () { beep({ freq: f[i], dur: 0.22, vol: 0.13, type: 'triangle' }); }, i * 110); })(i);
+      }
+    }
+  };
+
+  /* ---------- puzzle logic ---------- */
+  function canon(st) { return st.map(function (t) { return t.join(','); }).sort().join('|'); }
+  function isWinArr(st) {
+    for (var i = 0; i < st.length; i++) {
+      var t = st[i];
+      if (t.length === 0) continue;
+      if (i === giantIdx) {
+        if (t.length !== GCAP) return false;
+        for (var q = 0; q < t.length; q++) if (t[q] !== targetColor) return false;
+        continue;
+      }
+      if (t.length !== CAP) return false;
+      for (var k = 1; k < t.length; k++) if (t[k] !== t[0]) return false;
+    }
+    return true;
+  }
+  function genMoves(st) {
+    var out = [];
+    var giantNeeds = giantIdx >= 0 && st[giantIdx].length < GCAP;
+    for (var i = 0; i < st.length; i++) {
+      if (i === giantIdx) continue;                 // 巨管锁定：不允许倒出
+      var a = st[i];
+      if (!a.length) continue;
+      var top = a[a.length - 1], run = 0;
+      for (var k = a.length - 1; k >= 0 && a[k] === top; k--) run++;
+      var allSame = run === a.length;
+      var complete = allSame && a.length === CAP;
+      if (complete && !(top === targetColor && giantNeeds)) continue;
+      for (var j = 0; j < st.length; j++) {
+        if (i === j) continue;
+        var b = st[j];
+        var capJ = (j === giantIdx) ? GCAP : CAP;
+        if (b.length >= capJ) continue;
+        if (complete) {
+          if (j !== giantIdx) continue;             // 已归位的管只能再倒进巨管
+        } else if (j === giantIdx) {
+          if (top !== targetColor) continue;        // 巨管只收指定颜色
+        } else {
+          if (allSame && b.length === 0) continue;
+          if (b.length > 0 && b[b.length - 1] !== top) continue;
+        }
+        var n = Math.min(run, capJ - b.length);
+        var nx = st.map(function (t) { return t.slice(); });
+        for (var q = 0; q < n; q++) nx[j].push(nx[i].pop());
+        var score = 0;
+        if (j === giantIdx) score += 6;             // 优先喂巨管，求解器跑得极快
+        else if (b.length > 0) score += 4;
+        if (n === run) score += 2;
+        if (b.length + n === capJ) score += 1;
+        out.push({ nx: nx, s: score });
+      }
+    }
+    out.sort(function (p, q) { return p.s - q.s; });
+    return out.map(function (o) { return o.nx; });
+  }
+  function solvable(start, cap) {
+    var seen = Object.create(null), stack = [start.map(function (t) { return t.slice(); })], it = 0;
+    while (stack.length) {
+      if (++it > cap) return false;
+      var st = stack.pop();
+      if (isWinArr(st)) return true;
+      var key = canon(st);
+      if (seen[key]) continue;
+      seen[key] = 1;
+      var ms = genMoves(st);
+      for (var i = 0; i < ms.length; i++) stack.push(ms[i]);
+    }
+    return false;
+  }
+  function generate(colors, empties) {
+    for (var attempt = 0; attempt < 80; attempt++) {
+      var pool = [];
+      for (var c = 0; c < colors; c++) for (var i = 0; i < CAP; i++) pool.push(c);
+      shuffle(pool);
+      var t = [];
+      for (var m = 0; m < colors; m++) t.push(pool.slice(m * CAP, (m + 1) * CAP));
+      for (var e = 0; e < empties; e++) t.push([]);
+      if (solvable(t, 200000)) return t;
+    }
+    return t;
+  }
+  // 巨管模式：巨管底部预置 1 份目标色当提示，所以池里目标色只产 GCAP-1 份（否则总量超过容量就永远赢不了）
+  function generateGiant(colors, empties) {
+    var t = [[0]], target = 0;
+    for (var attempt = 0; attempt < 200; attempt++) {
+      target = (Math.random() * colors) | 0;
+      var pool = [];
+      for (var c = 0; c < colors; c++) {
+        var n = (c === target) ? (GCAP - 1) : CAP;
+        for (var i = 0; i < n; i++) pool.push(c);
+      }
+      shuffle(pool);
+      var nTubes = Math.ceil(pool.length / CAP);
+      t = [[target]];                          // 巨管：底部 1 份目标色作提示
+      for (var m = 0; m < nTubes; m++) t.push(pool.slice(m * CAP, (m + 1) * CAP));
+      for (var e = 0; e < empties; e++) t.push([]);
+      var sg = giantIdx, st2 = targetColor;
+      giantIdx = 0; targetColor = target;
+      var ok = solvable(t, 400000);
+      giantIdx = sg; targetColor = st2;
+      if (ok) break;
+    }
+    return { tubes: t, target: target };
+  }
+  function pourCount(from, to) {
+    if (from < 0 || to < 0 || from === to) return 0;
+    if (from === giantIdx) return 0;               // 巨管不允许倒出
+    var a = tubes[from];
+    if (!a.length) return 0;
+    var top = a[a.length - 1], run = 0;
+    for (var k = a.length - 1; k >= 0 && a[k] === top; k--) run++;
+    if (to === giantIdx && top !== targetColor) return 0;   // 巨管只收指定颜色
+    var capTo = (to === giantIdx) ? GCAP : CAP;
+    return Math.min(run, capTo - tubes[to].length);
+  }
+
+  /* ---------- persistence ---------- */
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({
+        v: 2, tubes: tubes, caps: caps, history: history, moves: moves,
+        colors: colorCount, start: levelStart, sound: soundOn,
+        mode: mode, giant: giantIdx, target: targetColor, extra: extraUsed
+      }));
+    } catch (e) {}
+  }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if (!s || s.v !== 2 || !Array.isArray(s.tubes) || !s.tubes.length) return false;
+      mode = (s.mode === 'giant') ? 'giant' : 'classic';
+      giantIdx = (mode === 'giant' && typeof s.giant === 'number' && s.giant >= 0) ? s.giant : -1;
+      targetColor = (giantIdx >= 0 && typeof s.target === 'number') ? s.target : -1;
+      if (giantIdx >= 0 && (targetColor < 0 || targetColor >= PALETTE.length)) return false;
+      var ok = s.tubes.every(function (t, i) {
+        var cp = (i === giantIdx) ? GCAP : CAP;
+        return Array.isArray(t) && t.length <= cp && t.every(function (c) { return c >= 0 && c < PALETTE.length; });
+      });
+      if (!ok) return false;
+      tubes = s.tubes.map(function (t) { return t.slice(); });
+      caps = (Array.isArray(s.caps) && s.caps.length === tubes.length)
+        ? s.caps.slice()
+        : tubes.map(function (_, i) { return (i === giantIdx) ? GCAP : CAP; });
+      history = Array.isArray(s.history) ? s.history : [];
+      moves = s.moves || 0;
+      colorCount = s.colors || 6;
+      levelStart = Array.isArray(s.start) && s.start.length === tubes.length
+        ? s.start.map(function (t) { return t.slice(); })
+        : tubes.map(function (t) { return t.slice(); });
+      extraUsed = (typeof s.extra === 'number') ? Math.max(0, s.extra) : 0;
+      if (typeof s.sound === 'boolean') soundOn = s.sound;
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* ---------- layout ---------- */
+  // 巨管独占顶部一整行，其余管在下面均分成网格
+  function layout() {
+    var n = tubes.length;
+    if (!n) { sizes = []; pos = []; return; }
+    var gi = giantIdx;
+    var startIdx = (gi >= 0) ? 1 : 0;
+    var normal = n - startIdx;
+    var padX = 16, padY = 10;
+    var availW = W - padX * 2, availH = H - padY * 2;
+
+    var rowsN = (normal <= 5) ? 1 : (normal <= 10 ? 2 : 3);
+    var colsN = Math.ceil(normal / rowsN);
+    var totalRows = rowsN + (gi >= 0 ? 1 : 0);
+    var rowH = availH / totalRows;
+
+    tubeW = Math.min(64, (availW / colsN) * 0.68);
+    tubeH = Math.min(rowH * 0.86, tubeW * 3.9);
+    tubeH = Math.max(tubeH, 70);
+    var gap = Math.min(26, tubeW * 0.44);
+
+    var gW = tubeW * 1.5, gH = tubeH * 1.08;
+    pos = new Array(n);
+    sizes = new Array(n);
+
+    var topY = padY;
+    if (gi >= 0) {
+      sizes[gi] = { w: gW, h: gH };
+      pos[gi] = { x: (W - gW) / 2, y: padY + (rowH - gH) / 2 };
+      topY = padY + rowH;
+    }
+    var rem = normal, idx = startIdx;
+    var rH2 = (availH - (topY - padY)) / rowsN;
+    for (var r = 0; r < rowsN; r++) {
+      var c = Math.ceil(rem / (rowsN - r));
+      rem -= c;
+      var sx = (W - (c * tubeW + (c - 1) * gap)) / 2;
+      var y = topY + r * rH2 + (rH2 - tubeH) / 2;
+      for (var k = 0; k < c; k++) {
+        pos[idx] = { x: sx + k * (tubeW + gap), y: y };
+        sizes[idx] = { w: tubeW, h: tubeH };
+        idx++;
+      }
+    }
+  }
+  function resize() {
+    var r = wrap.getBoundingClientRect();
+    W = Math.max(1, r.width); H = Math.max(1, r.height);
+    DPR = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    elRotate.style.display = (window.innerWidth > window.innerHeight) ? 'flex' : 'none';
+    layout();
+  }
+
+  /* ---------- drawing ---------- */
+  function tubePath(g, w, h, inset) {
+    var left = -w / 2 + inset, right = w / 2 - inset;
+    var top = -h + inset, bottom = -inset;
+    var r = (right - left) / 2;
+    var tr = Math.min(r, w * 0.16);
+    g.beginPath();
+    g.moveTo(left, top + tr);
+    g.quadraticCurveTo(left, top, left + tr, top);
+    g.lineTo(right - tr, top);
+    g.quadraticCurveTo(right, top, right, top + tr);
+    g.lineTo(right, bottom - r);
+    g.arc(0, bottom - r, r, 0, Math.PI);
+    g.lineTo(left, top + tr);
+    g.closePath();
+  }
+  function getLayers(arr, count) {
+    var out = [], rem = count;
+    for (var i = 0; i < arr.length && rem > 0.0001; i++) {
+      var amt = Math.min(1, rem);
+      out.push({ color: arr[i], amt: amt });
+      rem -= amt;
+    }
+    return out;
+  }
+  // 把相邻的同色层合并成一整块，避免同色液体出现分段接缝
+  function mergeLayers(layers) {
+    var out = [];
+    for (var i = 0; i < layers.length; i++) {
+      var s = layers[i];
+      if (!s || !(s.amt > 0.0001)) continue;
+      var last = out[out.length - 1];
+      if (last && last.color === s.color) last.amt += s.amt;
+      else out.push({ color: s.color, amt: s.amt });
+    }
+    return out;
+  }
+  // draws a tube in local space: bottom-centre at (0,0), body spans y in [-h, 0]
+  function paintTube(g, layers, idx) {
+    var s = sizes[idx] || { w: tubeW, h: tubeH };
+    var w = s.w, h = s.h;
+    var cap = (idx === giantIdx) ? GCAP : CAP;
+    var isG = (idx === giantIdx && targetColor >= 0);
+    var tc = isG ? (PALETTE[targetColor] || '#888') : null;
+    layers = mergeLayers(layers);
+    var wall = Math.max(2.5, w * 0.055);
+
+    // glass body
+    tubePath(g, w, h, 0);
+    g.fillStyle = 'rgba(255,255,255,0.05)';
+    g.fill();
+
+    // liquid
+    g.save();
+    tubePath(g, w, h, wall);
+    g.clip();
+    g.fillStyle = 'rgba(255,255,255,0.035)';
+    g.fillRect(-w, -h, w * 2, h * 2);
+    var innerBottom = -wall, innerTop = -h + wall;
+    var unitH = (innerBottom - innerTop) / cap;
+    var y = innerBottom;
+    for (var i = 0; i < layers.length; i++) {
+      var seg = layers[i], sh = seg.amt * unitH;
+      y -= sh;
+      var col = PALETTE[seg.color] || '#888';
+      var grd = g.createLinearGradient(0, y, 0, y + sh);
+      grd.addColorStop(0, lighten(col, 0.24));
+      grd.addColorStop(0.42, lighten(col, 0.06));
+      grd.addColorStop(1, col);
+      g.fillStyle = grd;
+      g.fillRect(-w, y - 0.6, w * 2, sh + 1.2);
+      // 液面高光：只在每个色块的顶面画一次
+      if (sh > 3) {
+        g.fillStyle = 'rgba(255,255,255,0.22)';
+        g.fillRect(-w, y - 0.6, w * 2, Math.min(2.4, sh * 0.16));
+      }
+    }
+    g.restore();
+
+    // gloss
+    g.save();
+    tubePath(g, w, h, wall);
+    g.clip();
+    g.fillStyle = 'rgba(255,255,255,0.15)';
+    g.fillRect(-w * 0.31, -h + wall + h * 0.05, w * 0.12, h * 0.72);
+    g.fillStyle = 'rgba(255,255,255,0.06)';
+    g.fillRect(w * 0.19, -h + wall + h * 0.10, w * 0.06, h * 0.5);
+    g.restore();
+
+    // rim：巨管用目标色，普通管用玻璃白
+    var grd2 = g.createLinearGradient(-w / 2, 0, w / 2, 0);
+    if (isG) {
+      grd2.addColorStop(0, tc);
+      grd2.addColorStop(0.45, lighten(tc, 0.55));
+      grd2.addColorStop(1, tc);
+    } else {
+      grd2.addColorStop(0, 'rgba(255,255,255,0.28)');
+      grd2.addColorStop(0.45, 'rgba(255,255,255,0.72)');
+      grd2.addColorStop(1, 'rgba(255,255,255,0.28)');
+    }
+    g.fillStyle = grd2;
+    rr(g, -w / 2 - 4, -h - 4, w + 8, 7, 3.5);
+    g.fill();
+
+    // outline：巨管带目标色辉光
+    g.lineWidth = 2.4;
+    if (isG) {
+      g.save();
+      g.shadowColor = tc;
+      g.shadowBlur = 14;
+      g.strokeStyle = lighten(tc, 0.35);
+      tubePath(g, w, h, 0);
+      g.stroke();
+      g.restore();
+    } else {
+      g.strokeStyle = 'rgba(255,255,255,0.5)';
+      tubePath(g, w, h, 0);
+      g.stroke();
+    }
+    g.lineWidth = 1;
+    g.strokeStyle = 'rgba(255,255,255,0.14)';
+    tubePath(g, w, h, wall);
+    g.stroke();
+
+    // 巨管的「只进不出」挂锁徽标
+    if (isG) {
+      g.save();
+      g.translate(w / 2 + 4, -h - 2);
+      g.fillStyle = 'rgba(10,16,26,0.88)';
+      g.beginPath(); g.arc(0, 0, 8.5, 0, Math.PI * 2); g.fill();
+      g.lineWidth = 1.3; g.strokeStyle = lighten(tc, 0.4); g.stroke();
+      g.strokeStyle = '#e8eef7'; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(0, -1.7, 2.6, Math.PI, 0); g.stroke();
+      g.fillStyle = '#e8eef7';
+      rr(g, -3.7, -1.5, 7.4, 5.8, 1.5); g.fill();
+      g.restore();
+    }
+  }
+
+  function drawStream(x1, y1, x2, y2, color, amt) {
+    var mx = (x1 + x2) / 2, my = Math.max(y1, y2) + 14;
+    ctx.save();
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = lighten(color, 0.18);
+    ctx.lineWidth = Math.max(3, tubeW * 0.14);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.quadraticCurveTo(mx, my, x2, y2);
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.quadraticCurveTo(mx, my, x2, y2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    var t = performance.now();
+    var transfer = 0, p = 0;
+    if (anim) {
+      p = clamp((t - anim.t0) / anim.dur, 0, 1);
+      if (p < 0.28) transfer = 0;
+      else if (p < 0.72) transfer = anim.n * easeInOut((p - 0.28) / 0.44);
+      else transfer = anim.n;
+    }
+
+    for (var i = 0; i < tubes.length; i++) {
+      if (anim && i === anim.from) continue;
+      var layers;
+      if (anim && i === anim.to) {
+        layers = getLayers(anim.dstSnap, anim.dstBase);
+        if (transfer > 0.0001) layers = layers.concat([{ color: anim.color, amt: transfer }]);
+      } else {
+        layers = getLayers(tubes[i], tubes[i].length);
+      }
+      var s = sizes[i] || { w: tubeW, h: tubeH };
+      var lift = (i === selected) ? -Math.min(20, s.h * 0.1) : 0;
+      var sxo = 0;
+      if (shake && shake.i === i) {
+        var sdt = t - shake.t0;
+        if (sdt < 340) sxo = Math.sin(sdt * 0.055) * 5 * (1 - sdt / 340);
+      }
+      ctx.save();
+      ctx.translate(pos[i].x + s.w / 2 + sxo, pos[i].y + s.h + lift);
+      if (i === selected) {
+        ctx.shadowColor = 'rgba(96,165,250,0.9)';
+        ctx.shadowBlur = 18;
+        paintTube(ctx, layers, i);
+        ctx.shadowBlur = 0;
+      } else {
+        paintTube(ctx, layers, i);
+      }
+      ctx.restore();
+    }
+
+    if (anim) {
+      var pose = animPose(p);
+      // stream: from tilted mouth to destination mouth
+      if (p > 0.27 && p < 0.80 && transfer > 0.02) {
+        var ms = mouthWorld(pose);
+        var dsz = sizes[anim.to] || { w: tubeW };
+        var dtx = pos[anim.to].x + dsz.w / 2;
+        var dty = pos[anim.to].y + 8;
+        drawStream(ms.x, ms.y, dtx, dty, PALETTE[anim.color], (p - 0.28) / 0.44);
+      }
+      var srcLayers = getLayers(anim.srcSnap, anim.srcBase - transfer);
+      ctx.save();
+      ctx.translate(pose.bx, pose.by);
+      ctx.rotate(pose.ang);
+      paintTube(ctx, srcLayers, anim.from);
+      ctx.restore();
+    }
+
+    drawConfetti();
+  }
+
+  function sizeOf(i) { return sizes[i] || { w: tubeW, h: tubeH }; }
+  function animPose(p) {
+    var h = sizeOf(anim.from).h;
+    var sp = pos[anim.from], dp = pos[anim.to];
+    var sx = sp.x + sizeOf(anim.from).w / 2, sby = sp.y + h;
+    var dtx = dp.x + sizeOf(anim.to).w / 2;
+    var dir = (dtx >= sx) ? 1 : -1;
+
+    // tilt just enough to lean the mouth toward the target: always fits on screen
+    var need = Math.abs(dtx - sx) / h;
+    var theta = Math.min(0.95, Math.max(0.34, Math.asin(Math.min(0.82, need))));
+
+    var k;
+    if (p < 0.28) k = easeOut(p / 0.28);
+    else if (p < 0.72) k = 1;
+    else k = 1 - easeInOut((p - 0.72) / 0.28);
+
+    return {
+      bx: sx,
+      by: sby - k * Math.min(38, h * 0.17),
+      ang: dir * theta * k
+    };
+  }
+  function mouthWorld(pose) {
+    var h = sizeOf(anim.from).h;
+    return {
+      x: pose.bx + h * Math.sin(pose.ang),
+      y: pose.by - h * Math.cos(pose.ang)
+    };
+  }
+
+  /* ---------- confetti ---------- */
+  function spawnConfetti() {
+    confetti = [];
+    for (var i = 0; i < 90; i++) {
+      confetti.push({
+        x: W / 2 + (Math.random() - 0.5) * W * 0.5,
+        y: -20 - Math.random() * H * 0.4,
+        vx: (Math.random() - 0.5) * 2.2,
+        vy: 1.6 + Math.random() * 2.8,
+        w: 5 + Math.random() * 6,
+        h: 8 + Math.random() * 8,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.22,
+        c: PALETTE[(Math.random() * PALETTE.length) | 0],
+        life: 1
+      });
+    }
+  }
+  function drawConfetti() {
+    if (!confetti.length) return;
+    ctx.save();
+    for (var i = confetti.length - 1; i >= 0; i--) {
+      var p = confetti[i];
+      p.x += p.vx; p.y += p.vy; p.vy += 0.045; p.rot += p.vr; p.life -= 0.006;
+      if (p.y > H + 40 || p.life <= 0) { confetti.splice(i, 1); continue; }
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = clamp(p.life, 0, 1);
+      ctx.fillStyle = p.c;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  /* ---------- interaction ---------- */
+  function hit(x, y) {
+    for (var i = 0; i < pos.length; i++) {
+      var s = sizeOf(i);
+      var px = pos[i].x, py = pos[i].y;
+      var padX = s.w * 0.28, padY = s.h * 0.12;
+      if (x >= px - padX && x <= px + s.w + padX && y >= py - padY - 12 && y <= py + s.h + 16) return i;
+    }
+    return -1;
+  }
+  function reject(i) {
+    shake = { i: i, t0: performance.now() };
+    SFX.bad();
+  }
+  function onTap(ev) {
+    ac();
+    if (anim || won) return;
+    var r = canvas.getBoundingClientRect();
+    var x = ev.clientX - r.left, y = ev.clientY - r.top;
+    var i = hit(x, y);
+    if (i < 0) { selected = -1; return; }
+
+    if (i === giantIdx) {
+      // 巨管：只接受目标色，且永远不能作为源
+      var pc = (selected >= 0) ? pourCount(selected, i) : 0;
+      if (pc > 0) doMove(selected, i, pc);
+      else { reject(i); selected = -1; }
+      return;
+    }
+    if (selected < 0) {
+      if (tubes[i].length) { selected = i; SFX.pick(); }
+      return;
+    }
+    if (i === selected) { selected = -1; SFX.pick(); return; }
+
+    var n = pourCount(selected, i);
+    if (n > 0) {
+      doMove(selected, i, n);
+    } else {
+      if (tubes[i].length) { selected = i; SFX.pick(); }
+      else { selected = -1; SFX.bad(); }
+    }
+  }
+  function doMove(from, to, n) {
+    var srcSnap = tubes[from].slice();
+    var dstSnap = tubes[to].slice();
+    var color = tubes[from][tubes[from].length - 1];
+    anim = {
+      from: from, to: to, n: n, color: color,
+      srcSnap: srcSnap, srcBase: srcSnap.length,
+      dstSnap: dstSnap, dstBase: dstSnap.length,
+      t0: performance.now(), dur: 560, done: false
+    };
+    selected = -1;
+    for (var k = 0; k < n; k++) tubes[to].push(tubes[from].pop());
+    history.push({ from: from, to: to, n: n });
+    moves++;
+    elMv.textContent = moves;
+    btnUndo.disabled = false;
+    SFX.pour();
+  }
+  function finishMove() {
+    var from = anim.from, to = anim.to;
+    anim = null;
+    if (tubes[to].length === (to === giantIdx ? GCAP : CAP)) {
+      var all = true, expect = (to === giantIdx) ? targetColor : tubes[to][0];
+      for (var i = 0; i < tubes[to].length; i++) if (tubes[to][i] !== expect) { all = false; break; }
+      if (all) SFX.done();
+    }
+    if (isWinArr(tubes)) {
+      won = true;
+      spawnConfetti();
+      SFX.win();
+      setTimeout(function () {
+        elWt.textContent = '全部归位！';
+        elWp.textContent = '用了 ' + moves + ' 步，' + colorCount + ' 种颜色';
+        elMask.classList.add('show');
+      }, 620);
+    }
+    save();
+  }
+  function undo() {
+    if (anim || won || !history.length) return;
+    var m = history[history.length - 1];
+    if (m.add) {
+      // 加管：只有最后一支管仍是空的才能撤销
+      var last = tubes[tubes.length - 1];
+      if (!last || last.length !== 0) { SFX.bad(); return; }
+      history.pop();
+      tubes.pop(); caps.pop(); levelStart.pop();
+      extraUsed = Math.max(0, extraUsed - 1);
+      layout();
+    } else {
+      history.pop();
+      for (var k = 0; k < m.n; k++) tubes[m.from].push(tubes[m.to].pop());
+      moves = Math.max(0, moves - 1);
+    }
+    elMv.textContent = moves;
+    selected = -1;
+    btnUndo.disabled = !history.length;
+    SFX.pick();
+    syncUI();
+    save();
+  }
+  function addTube() {
+    if (anim || won) return;
+    if (extraUsed >= MAX_EXTRA) { SFX.bad(); return; }
+    tubes.push([]);
+    caps.push(CAP);
+    levelStart.push([]);   // 重开时保留已加的空管
+    extraUsed++;
+    history.push({ add: true });
+    btnUndo.disabled = false;
+    layout();
+    syncUI();
+    SFX.pick();
+    save();
+  }
+  function newGame(colors, m) {
+    if (colors) colorCount = colors;
+    if (m) mode = m;
+    extraUsed = 0;
+    if (mode === 'giant') {
+      var g = generateGiant(colorCount, 2);
+      giantIdx = 0;
+      targetColor = g.target;
+      tubes = g.tubes;
+    } else {
+      giantIdx = -1;
+      targetColor = -1;
+      tubes = generate(colorCount, 2);
+    }
+    caps = tubes.map(function (_, i) { return (i === giantIdx) ? GCAP : CAP; });
+    levelStart = tubes.map(function (t) { return t.slice(); });
+    history = []; moves = 0; selected = -1; anim = null; won = false;
+    shake = null;
+    confetti = [];
+    elMv.textContent = '0';
+    elLv.textContent = colorCount;
+    btnUndo.disabled = true;
+    elMask.classList.remove('show');
+    syncUI();
+    layout();
+    save();
+  }
+  function resetLevel() {
+    if (anim) return;
+    tubes = levelStart.map(function (t) { return t.slice(); });
+    caps = tubes.map(function (_, i) { return (i === giantIdx) ? GCAP : CAP; });
+    history = []; moves = 0; selected = -1; won = false;
+    shake = null;
+    confetti = [];
+    elMv.textContent = '0';
+    btnUndo.disabled = true;
+    elMask.classList.remove('show');
+    syncUI();
+    layout();
+    save();
+  }
+
+  /* ---------- ui ---------- */
+  function syncChips() {
+    var bs = document.querySelectorAll('#chips button');
+    for (var i = 0; i < bs.length; i++) {
+      bs[i].classList.toggle('on', parseInt(bs[i].getAttribute('data-c'), 10) === colorCount);
+    }
+  }
+  function syncModes() {
+    var bs = document.querySelectorAll('#modes button');
+    for (var i = 0; i < bs.length; i++) {
+      bs[i].classList.toggle('on', bs[i].getAttribute('data-m') === mode);
+    }
+  }
+  function syncAdd() {
+    btnAdd.textContent = '加管·' + (MAX_EXTRA - extraUsed);
+    btnAdd.disabled = extraUsed >= MAX_EXTRA;
+  }
+  function syncTarget() {
+    if (giantIdx >= 0 && targetColor >= 0) {
+      elTgtw.style.display = '';
+      elTgt.style.background = PALETTE[targetColor];
+      elTgt.style.color = PALETTE[targetColor];
+      elSub.textContent = '巨管只收目标色，倒进去就出不来';
+    } else {
+      elTgtw.style.display = 'none';
+      elSub.textContent = '把同色水倒进同一支管';
+    }
+  }
+  function syncUI() { syncChips(); syncModes(); syncAdd(); syncTarget(); }
+  document.getElementById('chips').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null;
+    if (!b) return;
+    ac();
+    newGame(parseInt(b.getAttribute('data-c'), 10));
+  });
+  document.getElementById('modes').addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null;
+    if (!b) return;
+    ac();
+    var m = b.getAttribute('data-m');
+    if (m !== mode) newGame(0, m);
+  });
+  btnUndo.addEventListener('click', undo);
+  btnAdd.addEventListener('click', addTube);
+  document.getElementById('reset').addEventListener('click', function () { ac(); resetLevel(); });
+  document.getElementById('new').addEventListener('click', function () { ac(); newGame(); });
+  document.getElementById('wagain').addEventListener('click', function () { resetLevel(); });
+  document.getElementById('wnext').addEventListener('click', function () { newGame(); });
+  btnSnd.addEventListener('click', function () {
+    ac();
+    soundOn = !soundOn;
+    btnSnd.textContent = soundOn ? '音效' : '静音';
+    if (soundOn) SFX.pick();
+    save();
+  });
+  function tapHandler(e) {
+    e.preventDefault();
+    if (e.touches && e.touches[0]) onTap(e.touches[0]);
+    else onTap(e);
+  }
+  if (window.PointerEvent) canvas.addEventListener('pointerdown', tapHandler);
+  else canvas.addEventListener('touchstart', tapHandler, { passive: false });
+
+  /* ---------- loop ---------- */
+  function frame() {
+    if (shake && performance.now() - shake.t0 > 340) shake = null;
+    if (anim && !anim.done) {
+      var p = (performance.now() - anim.t0) / anim.dur;
+      if (p >= 1) finishMove();
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 250); });
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+
+  btnSnd.textContent = soundOn ? '音效' : '静音';
+  if (!load()) newGame(6);
+  else {
+    elMv.textContent = moves;
+    elLv.textContent = colorCount;
+    btnUndo.disabled = !history.length;
+    if (isWinArr(tubes)) won = true;
+    layout();
+  }
+  btnSnd.textContent = soundOn ? '音效' : '静音';
+  syncUI();
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
