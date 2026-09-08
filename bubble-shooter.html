@@ -97,7 +97,7 @@
   <div id="mask" class="show">
     <div class="card">
       <h2 id="mTitle">泡泡龙</h2>
-      <p id="mText">在场地里拖动瞄准，松手发射，三颗同色即消除。<br>打掉支撑后，连着天花板的泡泡会整块掉落。<br>右侧侧栏是特技球，点一下装填。</p>
+      <p id="mText">在场地里拖动瞄准，松手发射，三颗同色即消除。<br>打掉支撑后，连着天花板的泡泡会整块掉落。<br>右侧侧栏是特技球，点一下装填。<br>右键、或点左下角预览球，可交换当前球与待选球。</p>
       <div class="row"><button class="pri" id="mGo">开始</button></div>
     </div>
   </div>
@@ -671,7 +671,7 @@
     // 下一颗
     g.fillStyle = C.sub; g.font = '500 10px -apple-system,"PingFang SC",sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'bottom';
-    g.fillText('下一颗', NX, NY - R - 12);
+    g.fillText('下一颗 · 点此交换', NX, NY - R - 12);
     drawSpec(NX, NY, S.next, R - 5);
   }
 
@@ -803,9 +803,20 @@
     }
     return -1;
   }
+  // 交换待发射球与待选球：右键，或点左下角"下一颗"预览（移动端没有右键）
+  function swap() {
+    if (S.phase !== 'play' || S.ball || S.paused) return false;
+    if (!S.cur || !S.next) return false;
+    var t = S.cur; S.cur = S.next; S.next = t;
+    fx(NX, NY - R - 28, '交换', C.good);
+    SFX.stick(); sync();
+    return true;
+  }
   cv.addEventListener('pointerdown', function (e) {
     ac();
+    if (e.button === 2) { e.preventDefault(); return; }   // 右键只用于交换，交给 contextmenu
     var p = local(e);
+    if (Math.hypot(p.x - NX, p.y - NY) < R + 10) { swap(); e.preventDefault(); return; }
     var si = sideIndex(p.x, p.y);
     if (si >= 0) {
       if (S.phase === 'play' && !S.ball && S.spec[si] > 0) {
@@ -832,6 +843,7 @@
     fire(); e.preventDefault();
   });
   cv.addEventListener('pointercancel', function () { S.aiming = false; });
+  cv.addEventListener('contextmenu', function (e) { e.preventDefault(); swap(); });
   cv.addEventListener('touchmove', function (e) { e.preventDefault(); }, { passive: false });
   window.addEventListener('keydown', function (e) {
     if (e.key === 'ArrowLeft') { S.aim = Math.max(-1.31, S.aim - 0.08); e.preventDefault(); }
@@ -878,9 +890,9 @@
 
   window.__bb = {
     S: S, LEVELS: LEVELS, SPEC: SPEC, start: start, step: step, draw: draw,
-    fire: fire, snap: snap, group: group, dropFloaters: dropFloaters, tracePath: tracePath, afterShot: afterShot,
+    fire: fire, swap: swap, snap: snap, group: group, dropFloaters: dropFloaters, tracePath: tracePath, afterShot: afterShot,
     cellX: cellX, cellY: cellY, key: key, colsIn: colsIn, nbrs: nbrs,
-    R: R, D: D, ROWH: ROWH, FW: FW, VIEW_H: VIEW_H, DANGER: DANGER, LX: LX, LY: LY
+    R: R, D: D, ROWH: ROWH, FW: FW, VIEW_H: VIEW_H, DANGER: DANGER, LX: LX, LY: LY, NX: NX, NY: NY
   };
 })();
 </script>
