@@ -151,10 +151,11 @@
     { id: 'bolt',    name: '闪电', desc: '清除全场同色' }
   ];
 
-  // 特技球无限使用，因此不再需要 spec 数量配置
+  // clus  = 着色时继承邻居色的概率（越高同色片越大）
+  // smooth= 孤色球（四周无同色）并入邻居多数色的概率，跑两遍
   var LEVELS = [
-    { name: '简单', screens: 2, dens: 0.62 },
-    { name: '困难', screens: 4, dens: 0.68 }
+    { name: '简单', screens: 2, dens: 0.62, clus: 0.30, smooth: 0.45 },
+    { name: '困难', screens: 4, dens: 0.68, clus: 0.26, smooth: 0.42 }
   ];
 
   /* ---------- 状态 ---------- */
@@ -267,7 +268,53 @@
       }
       inRow.forEach(function (k) { sup.add(k); });
     }
+    paint(L);
     reindex();
+  }
+
+  /* ---------- 着色：让同色连成片，减少孤色球 ---------- */
+  // 逐格纯随机在 4 色下会产生约 24% 的"孤色球"（所有邻居都不同色），盘面很碎。
+  // 结构生成完再统一着色：
+  //   1) 按行序逐格，以 L.clus 的概率继承一个已着色邻居的颜色
+  //      （同排左邻权重 x2 —— 横向连续同色最直观）；否则随机取色。
+  //   2) 两遍修补：仍没有同色邻居的格子，以 L.smooth 的概率并入邻居多数色。
+  function colorOf(b, L) {
+    var pool = [], l = S.grid.get(key(b.r, b.c - 1));
+    if (l) { pool.push(l.color); pool.push(l.color); }        // 左邻加权：横向连片
+    var ps = parents(b.r, b.c);
+    for (var j = 0; j < ps.length; j++) {
+      var p = S.grid.get(key(ps[j][0], ps[j][1]));
+      if (p) pool.push(p.color);
+    }
+    if (pool.length && Math.random() < L.clus) return pool[(Math.random() * pool.length) | 0];
+    return (Math.random() * 4) | 0;
+  }
+
+  function smooth(L) {
+    var order = [];
+    S.grid.forEach(function (b) { order.push(b); });
+    for (var i = 0; i < order.length; i++) {
+      var b = order[i], ns = nbrs(b.r, b.c), cnt = [0, 0, 0, 0], tot = 0, same = 0;
+      for (var j = 0; j < ns.length; j++) {
+        var o = S.grid.get(key(ns[j][0], ns[j][1]));
+        if (!o) continue;
+        cnt[o.color]++; tot++;
+        if (o.color === b.color) same++;
+      }
+      if (!tot || same) continue;                             // 已有同色邻居，不动
+      var best = 0;
+      for (var k = 1; k < 4; k++) if (cnt[k] > cnt[best]) best = k;
+      if (cnt[best] && Math.random() < L.smooth) b.color = best;
+    }
+  }
+
+  function paint(L) {
+    var order = [];
+    S.grid.forEach(function (b) { order.push(b); });
+    order.sort(function (a, b) { return (a.r - b.r) || (a.c - b.c); });
+    for (var i = 0; i < order.length; i++) order[i].color = colorOf(order[i], L);
+    smooth(L);
+    smooth(L);
   }
 
   /* ---------- 关卡流程 ---------- */
