@@ -1,20 +1,20 @@
 <!DOCTYPE html>
-<html lang="zh-CN" data-page-node-id="InvOVsLm3EFuqBKPuBwStO">
-<head data-page-node-id="n8BVtGQlmA7k09fHMFUTx5">
-<meta charset="utf-8" data-page-node-id="Dql09mGkjmoioimbbLAYIa">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" data-page-node-id="ppiJg4GOZuGdBDIkeX3sWF">
-<meta name="apple-mobile-web-app-capable" content="yes" data-page-node-id="jFrnqSmo8yzmnnayKMSvht">
-<meta name="mobile-web-app-capable" content="yes" data-page-node-id="RkwAQ8vHyX6tx5Mb8LYFx9">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" data-page-node-id="XsTc09F6rU6w7EB8eOMCX8">
-<meta name="apple-mobile-web-app-title" content="箭头脱出" data-page-node-id="AB0jfikJAN73oRWoPPwQe6">
-<meta name="theme-color" content="#0d1420" data-page-node-id="5zXVMvMaHlXOcw0LB6JZgF">
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="箭头脱出">
+<meta name="theme-color" content="#EDE9E3">
 <title>箭头脱出</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
-  html,body{height:100%;overflow:hidden;background:#0d1420}
+  html,body{height:100%;overflow:hidden;background:#EDE9E3}
   body{
     font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
-    color:#e8eef7;
+    color:#4A4741;
     -webkit-user-select:none;user-select:none;
     -webkit-tap-highlight-color:transparent;
     -webkit-touch-callout:none;
@@ -28,108 +28,108 @@
     height:100dvh;
     display:flex;flex-direction:column;
     padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    background:radial-gradient(120% 80% at 50% 0%,#1b2740 0%,#0d1420 62%);
+    background:radial-gradient(120% 80% at 50% 0%,#FAF7F2 0%,#E4DFD7 62%);
   }
   header{flex:0 0 auto;padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
   .title{font-size:17px;font-weight:600;letter-spacing:1px}
-  .title small{display:block;font-size:11px;font-weight:400;color:#7c8ba3;letter-spacing:0;margin-top:2px}
+  .title small{display:block;font-size:11px;font-weight:400;color:#9C948A;letter-spacing:0;margin-top:2px}
   .right{display:flex;align-items:center;gap:12px}
   .stats{display:flex;align-items:center;gap:14px}
   .stat{text-align:right;line-height:1.1}
   .stat b{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
-  .stat span{display:block;font-size:10px;color:#7c8ba3;margin-top:1px}
+  .stat span{display:block;font-size:10px;color:#9C948A;margin-top:1px}
   .sndbtn{
     width:34px;height:34px;flex:0 0 auto;border-radius:50%;font-size:15px;line-height:1;
-    font-family:inherit;color:#9fb0c8;background:rgba(255,255,255,.06);
-    border:1px solid rgba(255,255,255,.1);cursor:pointer;transition:.15s;
+    font-family:inherit;color:#7B746B;background:rgba(255,255,255,.62);
+    border:1px solid rgba(74,71,65,.14);cursor:pointer;transition:.15s;
   }
-  .sndbtn:active{background:rgba(255,255,255,.16)}
+  .sndbtn:active{background:rgba(74,71,65,.09)}
   .chips{flex:0 0 auto;display:flex;gap:8px;padding:0 16px 8px}
   .chips button{
-    flex:1;padding:7px 0;font-size:12px;font-family:inherit;color:#8fa1bb;
-    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+    flex:1;padding:7px 0;font-size:12px;font-family:inherit;color:#7B746B;
+    background:rgba(255,255,255,.62);border:1px solid rgba(74,71,65,.14);
     border-radius:999px;cursor:pointer;transition:.18s;
   }
-  .chips button.on{background:rgba(59,130,246,.22);border-color:rgba(59,130,246,.55);color:#cfe0ff}
+  .chips button.on{background:rgba(122,141,124,.26);border-color:rgba(110,130,113,.6);color:#3F4A41}
   #wrap{flex:1 1 auto;position:relative;min-height:0}
   canvas{display:block;width:100%;height:100%;touch-action:none}
   footer{flex:0 0 auto;display:flex;gap:8px;padding:10px 16px 16px}
   footer button{
-    flex:1;padding:13px 0;font-size:13px;font-family:inherit;color:#dce6f5;
-    background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);
+    flex:1;padding:13px 0;font-size:13px;font-family:inherit;color:#57524B;
+    background:rgba(255,255,255,.66);border:1px solid rgba(74,71,65,.13);
     border-radius:12px;cursor:pointer;transition:.15s;
   }
-  footer button:active{background:rgba(255,255,255,.16)}
+  footer button:active{background:rgba(74,71,65,.09)}
   footer button:disabled{opacity:.35;cursor:default}
   #rotate{
     position:fixed;inset:0;z-index:50;display:none;
     align-items:center;justify-content:center;flex-direction:column;gap:14px;
-    background:#0d1420;text-align:center;padding:24px;
+    background:#EDE9E3;text-align:center;padding:24px;
   }
-  #rotate .ic{width:54px;height:84px;border:2px solid #4a5a75;border-radius:10px;position:relative}
-  #rotate .ic::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:12px;margin:-6px 0 0 -13px;border:2px solid #4a5a75;border-radius:3px}
-  #rotate p{font-size:15px;color:#9fb0c8}
+  #rotate .ic{width:54px;height:84px;border:2px solid #B4ACA2;border-radius:10px;position:relative}
+  #rotate .ic::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:12px;margin:-6px 0 0 -13px;border:2px solid #B4ACA2;border-radius:3px}
+  #rotate p{font-size:15px;color:#857E75}
   #mask{
     position:absolute;inset:0;z-index:20;display:none;
-    align-items:center;justify-content:center;background:rgba(9,14,23,.82);
+    align-items:center;justify-content:center;background:rgba(237,233,227,.86);
     backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
   }
   #mask.show{display:flex}
-  .card{text-align:center;padding:28px 30px;border-radius:20px;background:#151f31;border:1px solid rgba(255,255,255,.1);min-width:238px}
+  .card{text-align:center;padding:28px 30px;border-radius:20px;background:#FBF8F3;border:1px solid rgba(74,71,65,.12);min-width:238px}
   .card h2{font-size:20px;font-weight:600;margin-bottom:6px}
-  .card p{font-size:13px;color:#8fa1bb;margin-bottom:20px}
+  .card p{font-size:13px;color:#8A837A;margin-bottom:20px}
   .card .row{display:flex;gap:10px}
   .card button{
     flex:1;padding:11px 0;font-size:14px;font-family:inherit;border-radius:11px;cursor:pointer;border:none;
-    background:rgba(255,255,255,.1);color:#dce6f5;
+    background:rgba(74,71,65,.07);color:#57524B;
   }
-  .card button.pri{background:#3b82f6;color:#fff}
+  .card button.pri{background:#7A8D7C;color:#fff}
 </style>
 </head>
-<body data-page-node-id="xznYEVBXPxVncXkqSAc2UJ">
-<div id="app" data-page-node-id="8CGUiqBdpVBXMrRu0SDIpe">
-  <header data-page-node-id="epYpLuv8BPhAV8XzTrDiVJ">
-    <div class="title" data-page-node-id="r65DRD8DPAQWmn9djQxHO5">箭头脱出<small id="sub" data-page-node-id="NveqWSOE4mmhBm30ni9dh0">像蛇一样沿箭头滑出</small></div>
-    <div class="right" data-page-node-id="92pk4BzQWOlp4RCGm4BKwo">
-      <div class="stats" data-page-node-id="WLnJy0Gdi7Vp1sww7NhNvb">
-        <div class="stat" data-page-node-id="EMzBd9ngBnMo2z8DNWmoNB"><b id="left" data-page-node-id="O99kEOv3E780L3mawRe48M">0</b><span data-page-node-id="Hhj4rrDolPSr6612CVFuCB">剩余</span></div>
-        <div class="stat" data-page-node-id="va7rQ20m2f2W62r9k2zPu0"><b id="mv" data-page-node-id="ThLNczsWE1M1XX0ponbR0n">0</b><span data-page-node-id="yDCCo0fqYJtBbV2QiDkgQ9">步数</span></div>
+<body>
+<div id="app">
+  <header>
+    <div class="title">箭头脱出<small id="sub">像蛇一样沿箭头滑出</small></div>
+    <div class="right">
+      <div class="stats">
+        <div class="stat"><b id="left">0</b><span>剩余</span></div>
+        <div class="stat"><b id="mv">0</b><span>步数</span></div>
       </div>
-      <button class="sndbtn" id="snd" title="音效" data-page-node-id="193kuw56DvOUB9eA8kZXYC">♪</button>
+      <button class="sndbtn" id="snd" title="音效">♪</button>
     </div>
   </header>
 
-  <div class="chips" id="chips" data-page-node-id="VSXsDNTsXvoixpxrmrqun5">
-    <button data-i="0" data-page-node-id="eiHW9VUJLFY3YrWbjf5VYB">简单</button>
-    <button data-i="1" data-page-node-id="ppUZhfBt897T6mvllRjMUP">普通</button>
-    <button data-i="2" data-page-node-id="1FMBYCVPthq6PrH0GmSABI">困难</button>
-    <button data-i="3" data-page-node-id="ywXNzwr1WyZ5UsLX9VysXa">地狱</button>
+  <div class="chips" id="chips">
+    <button data-i="0">简单</button>
+    <button data-i="1">普通</button>
+    <button data-i="2">困难</button>
+    <button data-i="3">地狱</button>
   </div>
 
-  <div id="wrap" data-page-node-id="HEeCAzPNB94W5v9Mk3P8s7"><canvas id="cv" data-page-node-id="V2iiszDCjdEscrv2XLgTef"></canvas></div>
+  <div id="wrap"><canvas id="cv"></canvas></div>
 
-  <footer data-page-node-id="tGpIwaOUzttFVjr5gmOrl2">
-    <button id="undo" data-page-node-id="65DZJM9GU6miqi7KlCYDpi">撤销</button>
-    <button id="hint" data-page-node-id="gCEyQq4qiuVI32XRwfIMi6">提示</button>
-    <button id="reset" data-page-node-id="ewzxG3tHAua9nxBcR12Qet">重开</button>
-    <button id="new" data-page-node-id="3VmDEjlHGCfDHqjp15x4Ro">新关</button>
+  <footer>
+    <button id="undo">撤销</button>
+    <button id="hint">提示</button>
+    <button id="reset">重开</button>
+    <button id="new">新关</button>
   </footer>
 
-  <div id="mask" data-page-node-id="Dtgr3WAEpLOvaiBG9DLnJt">
-    <div class="card" data-page-node-id="9DV2yHGzirDfI4grb7rDr0">
-      <h2 id="mt" data-page-node-id="1PJ7VcPuDZPi7cIwg9nSbQ">全部脱出</h2>
-      <p id="mp" data-page-node-id="kbun0OtJ8yuoAjjvfXBVx7">用了 0 步</p>
-      <div class="row" data-page-node-id="xbnxot2M6uaPRYjzlbTGmi">
-        <button id="again" data-page-node-id="L2CHT1UkZ0iYCwwKI20GiD">再来一局</button>
-        <button id="next" class="pri" data-page-node-id="YswgV6yI8CVTrwvQdlcKlW">下一关</button>
+  <div id="mask">
+    <div class="card">
+      <h2 id="mt">全部脱出</h2>
+      <p id="mp">用了 0 步</p>
+      <div class="row">
+        <button id="again">再来一局</button>
+        <button id="next" class="pri">下一关</button>
       </div>
     </div>
   </div>
 </div>
 
-<div id="rotate" data-page-node-id="kLrskFpQttXQWiYgDZNygb">
-  <div class="ic" data-page-node-id="QZCDEiybBaovq4nxSumP0Q"></div>
-  <p data-page-node-id="RHBYcTC28Xu6zfTrrCwbVx">请把手机竖过来</p>
+<div id="rotate">
+  <div class="ic"></div>
+  <p>请把手机竖过来</p>
 </div>
 
 <script>
@@ -138,7 +138,7 @@
 
   /* ---------- 常量 ---------- */
   var DIRS = [[-1, 0], [0, 1], [1, 0], [0, -1]];   // 0上 1右 2下 3左
-  var PAL = ['#38bdf8', '#fbbf24', '#a78bfa', '#fb7185', '#34d399', '#f472b6', '#60a5fa', '#facc15'];
+  var PAL = ['#B57C6B', '#D3AE81', '#A9A670', '#96AE88', '#7CA394', '#82A7B4', '#8091B4', '#9B93B8'];
   // cover 设到超过算法极限，等价于「尽力填满」；实际密度由可放置性决定
   // pair = 剩余空格优先凑成 2 格线的概率，其余走单格；hole = 故意留空的概率（留出呼吸感）
   var LEVELS = [
@@ -608,7 +608,7 @@
     // 外描边 + 投影
     g.save();
     g.translate(0, Math.max(1.4, cell * 0.055));
-    g.strokeStyle = 'rgba(0,0,0,0.34)';
+    g.strokeStyle = 'rgba(90,84,76,0.2)';
     g.lineWidth = w * 1.26;
     strokePoly(g, P);
     g.restore();
@@ -628,7 +628,7 @@
 
     // 高光
     g.save();
-    g.globalAlpha = (opt.alpha === undefined ? 1 : opt.alpha) * 0.22;
+    g.globalAlpha = (opt.alpha === undefined ? 1 : opt.alpha) * 0.3;
     g.strokeStyle = '#ffffff';
     g.lineWidth = w * 0.34;
     strokePoly(g, P);
@@ -666,16 +666,16 @@
     var bw = cell * C, bh = cell * R, pad = Math.max(5, cell * 0.12), i;
 
     ctx.save();
-    ctx.fillStyle = 'rgba(255,255,255,0.028)';
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
     rr(ctx, ox - pad, oy - pad, bw + pad * 2, bh + pad * 2, cell * 0.22);
     ctx.fill();
     ctx.lineWidth = 1;
-    ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+    ctx.strokeStyle = 'rgba(74,71,65,0.12)';
     ctx.stroke();
     ctx.restore();
 
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.045)';
+    ctx.strokeStyle = 'rgba(74,71,65,0.07)';
     ctx.lineWidth = 1;
     for (i = 1; i < C; i++) {
       ctx.beginPath();
@@ -698,11 +698,11 @@
       var hray = escapeInfo(hpcs, grid).ray;
       ctx.save();
       ctx.globalAlpha = (1 - hp) * 0.22;
-      fillCells(ctx, hray, '#fde68a', 0.18);
+      fillCells(ctx, hray, '#C0A05E', 0.18);
       ctx.restore();
       ctx.save();
       ctx.globalAlpha = (1 - hp) * 0.8;
-      ctx.strokeStyle = '#fde68a';
+      ctx.strokeStyle = '#C0A05E';
       ctx.lineWidth = 2.5;
       var hx = gx(headOf(hpcs) % C), hy = gy((headOf(hpcs) / C) | 0);
       rr(ctx, hx - cell * (0.46 + hp * 0.16), hy - cell * (0.46 + hp * 0.16),
@@ -719,14 +719,14 @@
       ctx.globalAlpha = (1 - bp) * blink * 0.9;
       var bpts = staticPts(pieces[blockHi.id]);
       ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-      ctx.strokeStyle = '#f87171';
+      ctx.strokeStyle = '#C07870';
       ctx.lineWidth = cell * 0.62;
       strokePoly(ctx, bpts);
       ctx.restore();
       if (blockHi.cell >= 0) {
         ctx.save();
         ctx.globalAlpha = (1 - bp) * blink;
-        fillCells(ctx, [blockHi.cell], '#f87171', 0.55);
+        fillCells(ctx, [blockHi.cell], '#C07870', 0.55);
         ctx.restore();
       }
     } else if (blockHi) blockHi = null;
@@ -1001,7 +1001,7 @@
     ac();
     soundOn = !soundOn;
     btnSnd.textContent = soundOn ? '♪' : '✕';
-    btnSnd.style.color = soundOn ? '#9fb0c8' : '#5b6b82';
+    btnSnd.style.color = soundOn ? '#7B746B' : '#A9A29A';
     if (soundOn) SFX.pick();
     save();
   });
