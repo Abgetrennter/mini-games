@@ -444,7 +444,7 @@
     var a = S.aim;
     S.ball = {
       x: LX, y: S.camY + LY, t: S.cur.t, color: S.cur.color,
-      vx: Math.sin(a) * SPEED, vy: -Math.cos(a) * SPEED, hitColor: null
+      vx: Math.sin(a) * SPEED, vy: -Math.cos(a) * SPEED, hitColor: null, acc: 0
     };
     S.shots++;
     S.cur = S.next;
@@ -452,14 +452,20 @@
     SFX.shoot();
   }
 
+  // 定步长推进：预测线（tracePath）与实际球体（stepBall）共用同一套积分与判定顺序，
+  // 保证虚线画到哪儿球就落到哪儿。步长恒为 STPX，与帧长 dt 无关（余量累积到 b.acc）。
+  // 反射时必须同步翻转 stx —— 只翻 vx 而增量仍是入墙方向的话，
+  // 球会被逐帧按回墙面、只剩竖直分量，表现为贴墙直线上升。
   function stepBall(dt) {
     var b = S.ball; if (!b) return;
-    var dist = Math.hypot(b.vx, b.vy) * dt, steps = Math.max(1, Math.ceil(dist / STPX));
-    var sx = b.vx * dt / steps, sy = b.vy * dt / steps;
-    for (var i = 0; i < steps; i++) {
-      b.x += sx; b.y += sy;
-      if (b.x < R) { b.x = R; b.vx = -b.vx; }
-      if (b.x > FW - R) { b.x = FW - R; b.vx = -b.vx; }
+    var sp = Math.hypot(b.vx, b.vy);
+    if (b.stx === undefined) { b.stx = b.vx / sp * STPX; b.sty = b.vy / sp * STPX; }
+    b.acc += sp * dt;
+    while (b.acc >= STPX) {
+      b.acc -= STPX;
+      b.x += b.stx; b.y += b.sty;
+      if (b.x < R) { b.x = R; b.stx = -b.stx; b.vx = -b.vx; }
+      if (b.x > FW - R) { b.x = FW - R; b.stx = -b.stx; b.vx = -b.vx; }
       var hit = collide(b.x, b.y, R * 0.86);
       if (hit) { b.hitColor = hit.color; land(b, hit); return; }
       if (b.y <= R) { land(b, null); return; }
@@ -613,18 +619,20 @@
     drawFx();
   }
 
+  // 与 stepBall 保持完全一致的定步长推进和判定顺序，只额外记录折线点
   function tracePath() {
     var a = S.aim, vx = Math.sin(a), vy = -Math.cos(a);
+    var sp = Math.hypot(vx, vy), stx = vx / sp * STPX, sty = vy / sp * STPX;
     var x = LX, y = S.camY + LY, pts = [{ x: x, y: y - S.camY }], hit = null, len = 0;
-    var stp = STPX, max = 2600;
-    while (len < max) {
-      x += vx * stp; y += vy * stp; len += stp;
-      if (x < R) { x = R; vx = -vx; }
-      if (x > FW - R) { x = FW - R; vx = -vx; }
-      if (y <= R) { pts.push({ x: x, y: R - S.camY }); break; }
+    var guard = 0;
+    while (guard++ < 3000) {
+      x += stx; y += sty; len += STPX;
+      if (x < R) { x = R; stx = -stx; }
+      if (x > FW - R) { x = FW - R; stx = -stx; }
       hit = collide(x, y, R * 0.86);
       if (hit) { pts.push({ x: x, y: y - S.camY }); break; }
-      if (len % 45 < stp) pts.push({ x: x, y: y - S.camY });
+      if (y <= R) { pts.push({ x: x, y: R - S.camY }); break; }
+      if (len % 45 < STPX) pts.push({ x: x, y: y - S.camY });
     }
     if (!hit && y > R) pts.push({ x: x, y: y - S.camY });
     return { pts: pts, hit: hit, x: x, y: y };
