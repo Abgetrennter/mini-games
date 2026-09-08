@@ -45,11 +45,13 @@
   canvas{display:block;width:100%;height:100%;touch-action:none}
   footer{flex:0 0 auto;display:flex;gap:7px;padding:10px 14px 16px}
   footer button{
-    flex:1;padding:13px 0;font-size:13px;font-family:inherit;color:#57524B;
+    flex:1;padding:12px 0;font-size:12px;font-family:inherit;color:#57524B;
     background:rgba(255,255,255,.66);border:1px solid rgba(74,71,65,.13);
     border-radius:12px;cursor:pointer;transition:.15s;
   }
   footer button:active{background:rgba(74,71,65,.09)}
+  footer button.acc{background:rgba(122,141,124,.22);border-color:rgba(110,130,113,.45);color:#3F4A41}
+  footer button.acc:active{background:rgba(122,141,124,.34)}
   #rotate{
     position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;
     flex-direction:column;gap:14px;background:#EDE9E3;text-align:center;padding:24px;
@@ -89,6 +91,7 @@
   <div id="wrap"><canvas id="cv"></canvas></div>
 
   <footer>
+    <button id="bSwap" class="acc">交换</button>
     <button id="bNew">重新开始</button>
     <button id="bPause">暂停</button>
     <button id="bSound">音效 开</button>
@@ -97,7 +100,7 @@
   <div id="mask" class="show">
     <div class="card">
       <h2 id="mTitle">泡泡龙</h2>
-      <p id="mText">在场地里拖动瞄准，松手发射，三颗同色即消除。<br>打掉支撑后，连着天花板的泡泡会整块掉落。<br>右侧侧栏是特技球，点一下装填。<br>右键、或点左下角预览球，可交换当前球与待选球。</p>
+      <p id="mText">在场地里拖动瞄准，松手发射，三颗同色即消除。<br>打掉支撑后，连着天花板的泡泡会整块掉落。<br>右侧侧栏是特技球，无限使用，点一下装填。<br>底部「交换」按钮可交换当前球与待选球。</p>
       <div class="row"><button class="pri" id="mGo">开始</button></div>
     </div>
   </div>
@@ -118,13 +121,20 @@
   var PADX = (FW - CE * D) / 2; // 6
   var VIEW_H = 540;             // 可玩区高度
   var DANGER = 540;             // 危险线
+  // 六边形错行排列时相邻行必然垂直重叠 2R-ROWH ≈ 4.82px，
+  // 所以视口顶边无论如何都会切到边界行的上一排、露出一道细缝。
+  // 相机对齐行网格（camY = ROWH*r）后，用一条不透明天花板把它盖住。
+  var CEILH = 6;                // 天花板高度（须 > 4.82）
   var LX = FW / 2, LY = 622;    // 发射口
   var NX = 58, NY = 622;        // 下一颗
   var GRAV = 1500, SPEED = 820, STPX = 4;  // STPX: 弹道积分步长，预测线与实际球体必须一致
-  var TIPY = 300;                         // 每次滚动后，最低泡泡落在屏幕上的高度
   var KEEPR = 2;                          // 视口顶部只剩这么多行就开始滚屏（避免残局只能远射）
   var TOPKEEP = R + (KEEPR - 1) * ROWH;   // 顶部两行的下边界屏幕 y ≈ 49
-  var RPS = Math.max(4, Math.round((TIPY - TOPKEEP) / ROWH));  // 每屏行数 = 8（= 每次滚动真实推进的行数）
+  var RPS = 8;                            // 每次滚动推进 8 行
+  // TIPY 由行距反推（而非取整数），相机才会正好停在行边界上：
+  // camY = lowestY - TIPY = ROWH*(rmax - 1 - RPS) —— 必为 ROWH 的整数倍，
+  // 最上面一排球永远完整贴合顶边，不会出现只露一道缝的情况。
+  var TIPY = TOPKEEP + RPS * ROWH;        // ≈ 298.6：滚动后最低泡泡落在屏幕上的高度
 
   var COLORS = ['#C08A76', '#A9A670', '#7CA394', '#8091B4'];
   var C = {
@@ -141,9 +151,10 @@
     { id: 'bolt',    name: '闪电', desc: '清除全场同色' }
   ];
 
+  // 特技球无限使用，因此不再需要 spec 数量配置
   var LEVELS = [
-    { name: '简单', screens: 2, dens: 0.62, spec: [2, 2, 2, 1] },
-    { name: '困难', screens: 4, dens: 0.68, spec: [1, 1, 1, 0] }
+    { name: '简单', screens: 2, dens: 0.62 },
+    { name: '困难', screens: 4, dens: 0.68 }
   ];
 
   /* ---------- 状态 ---------- */
@@ -152,10 +163,9 @@
     grid: new Map(), byRow: new Map(),
     rows: 0, camY: 0, camT: 0,
     cur: null, next: null, ball: null,
-    spec: [0, 0, 0, 0],
     pops: [], falls: [], fx: [],
     score: 0, screens: 0, shots: 0,
-    aim: 0, aiming: false, paused: false, shake: 0
+    aim: 0, aiming: false, paused: false, shake: 0, warn: false
   };
 
   /* ---------- 网格 ---------- */
@@ -203,10 +213,9 @@
   // 避免"随机铺完再剪枝"在渗流临界密度下把整条关卡剪短。
   function gen(lv) {
     var L = LEVELS[lv];
-    // 相机总行程 = lowestY - TIPY，每次滚动推进 (TIPY - TOPKEEP)，
-    // 反推行数使"滚动次数 = screens-1"，屏数计数才能和难度标签对得上。
-    var adv = TIPY - TOPKEEP;
-    S.rows = Math.max(8, Math.round((TIPY + (L.screens - 1) * adv - R) / ROWH) + 1);
+    // 每次滚动推进 RPS 行、共滚 (screens-1) 次，加上首屏留在视口里的 RPS 行和
+    // 触发滚屏时残留的 KEEPR 行：rows = RPS*screens + 2。
+    S.rows = RPS * L.screens + 2;
     S.grid = new Map();
     var sup = new Set();
     for (var c0 = 0; c0 < CE; c0++) { S.grid.set(key(0, c0), mk(0, c0, (Math.random() * 4) | 0)); sup.add(key(0, c0)); }
@@ -262,17 +271,27 @@
   }
 
   /* ---------- 关卡流程 ---------- */
+  // 把相机吸附到行边界：最上面一排球完整显示；
+  // 若边界那一行恰好是空的，最多再往下顺延 2 行，让真正有球的一排贴齐顶边。
+  function alignCam(v) {
+    var r = Math.max(0, Math.round(v / ROWH));
+    for (var i = 0; i < 2 && r < S.rows; i++) {
+      var a = S.byRow.get(r);
+      if (a && a.length) break;
+      r++;
+    }
+    return Math.max(0, r * ROWH);
+  }
+
   function start(lv) {
-    var L = LEVELS[lv];
     S.lv = lv; S.phase = 'play';
     gen(lv);
-    S.spec = L.spec.slice();
     S.pops = []; S.falls = []; S.fx = [];
     S.score = 0; S.screens = 1; S.shots = 0;   // screens = 当前所在屏（1 起算）
-    S.ball = null; S.aiming = false; S.paused = false; S.shake = 0;
+    S.ball = null; S.aiming = false; S.paused = false; S.shake = 0; S.warn = false;
     S.cur = { t: 'n', color: pickColor() };
     S.next = { t: 'n', color: pickColor() };
-    S.camY = Math.max(0, lowestY() - TIPY);
+    S.camY = alignCam(lowestY() - TIPY);
     S.camT = S.camY;
     hideMask(); sync();
   }
@@ -448,7 +467,7 @@
     var any = false;
     S.grid.forEach(function (b) { if (b.y - S.camY > TOPKEEP) any = true; });
     if (!any) {                       // 视口顶部只剩 KEEPR 行 -> 立即滚屏，不等全清
-      S.camT = Math.max(0, lowestY() - TIPY);
+      S.camT = alignCam(lowestY() - TIPY);
       if (S.camT < S.camY - 1) { S.phase = 'scroll'; fx(LX, 300, '上移推进', C.gold); SFX.clear(); }
     }
   }
@@ -471,6 +490,9 @@
   // 保证虚线画到哪儿球就落到哪儿。步长恒为 STPX，与帧长 dt 无关（余量累积到 b.acc）。
   // 反射时必须同步翻转 stx —— 只翻 vx 而增量仍是入墙方向的话，
   // 球会被逐帧按回墙面、只剩竖直分量，表现为贴墙直线上升。
+  var bncCool = 0;
+  function bnc() { if (bncCool <= 0) { bncCool = 0.09; SFX.bounce(); } }
+
   function stepBall(dt) {
     var b = S.ball; if (!b) return;
     var sp = Math.hypot(b.vx, b.vy);
@@ -479,8 +501,8 @@
     while (b.acc >= STPX) {
       b.acc -= STPX;
       b.x += b.stx; b.y += b.sty;
-      if (b.x < R) { b.x = R; b.stx = -b.stx; b.vx = -b.vx; }
-      if (b.x > FW - R) { b.x = FW - R; b.stx = -b.stx; b.vx = -b.vx; }
+      if (b.x < R) { b.x = R; b.stx = -b.stx; b.vx = -b.vx; bnc(); }
+      if (b.x > FW - R) { b.x = FW - R; b.stx = -b.stx; b.vx = -b.vx; bnc(); }
       var hit = collide(b.x, b.y, R * 0.86);
       if (hit) { b.hitColor = hit.color; land(b, hit); return; }
       if (b.y <= R) { land(b, null); return; }
@@ -507,6 +529,7 @@
   function step(dt) {
     if (S.paused) return;
     if (S.shake > 0) S.shake = Math.max(0, S.shake - dt * 22);
+    if (bncCool > 0) bncCool -= dt;
 
     for (var i = S.pops.length - 1; i >= 0; i--) {
       S.pops[i].t += dt;
@@ -528,7 +551,6 @@
       S.camY += (S.camT - S.camY) * Math.min(1, dt * 6);
       if (Math.abs(S.camT - S.camY) < 1.2) {
         S.camY = S.camT; S.phase = 'play'; S.screens++;
-        S.spec[(Math.random() * 4) | 0]++;
         if (S.grid.size === 0) finish(true);
       }
       sync(); return;
@@ -538,9 +560,11 @@
     stepBall(dt);
 
     // 危险线：只算还挂在阵上的
-    var over = false;
-    S.grid.forEach(function (b) { if (b.y - S.camY + R > DANGER) over = true; });
-    if (over) { finish(false); return; }
+    var lowY = -1e9;
+    S.grid.forEach(function (b) { if (b.y - S.camY > lowY) lowY = b.y - S.camY; });
+    if (lowY + R > DANGER) { finish(false); return; }
+    if (!S.warn && lowY + R > DANGER - 90) { S.warn = true; SFX.warn(); }
+    else if (S.warn && lowY + R < DANGER - 150) S.warn = false;
     sync();
   }
 
@@ -627,6 +651,12 @@
     }
     g.restore();
 
+    // 天花板：盖住顶边被切到的那一排，泡泡看起来就是吊在天花板下面
+    g.fillStyle = '#DAD4CB';
+    g.fillRect(0, 0, FW, CEILH);
+    g.fillStyle = 'rgba(74,71,65,.18)';
+    g.fillRect(0, CEILH, FW, 1.5);
+
     drawAim();
     drawDanger();
     drawLauncher();
@@ -694,7 +724,7 @@
     // 下一颗
     g.fillStyle = C.sub; g.font = '500 10px -apple-system,"PingFang SC",sans-serif';
     g.textAlign = 'center'; g.textBaseline = 'bottom';
-    g.fillText('下一颗 · 点此交换', NX, NY - R - 12);
+    g.fillText('下一颗', NX, NY - R - 12);
     drawSpec(NX, NY, S.next, R - 5);
   }
 
@@ -735,18 +765,18 @@
     g.fillStyle = C.panel;
     rr(SBX - 6, 292, SBW + 12, 4 * 68 + 3 * 10 + 12, 16); g.fill();
     g.strokeStyle = 'rgba(74,71,65,.10)'; g.lineWidth = 1; g.stroke();
+    g.fillStyle = C.sub; g.font = '500 10px -apple-system,"PingFang SC",sans-serif';
+    g.textAlign = 'center'; g.textBaseline = 'bottom';
+    g.fillText('特技球 · 无限', SBX + SBW / 2, 286);
     for (var i = 0; i < 4; i++) {
-      var y = 298 + i * 78, n = S.spec[i], on = n > 0;
-      g.globalAlpha = on ? 1 : 0.34;
+      var y = 298 + i * 78;
       g.fillStyle = 'rgba(255,255,255,.85)';
       rr(SBX, y, SBW, 68, 12); g.fill();
-      g.strokeStyle = on ? 'rgba(110,130,113,.55)' : 'rgba(74,71,65,.14)';
-      g.lineWidth = on ? 1.8 : 1; g.stroke();
+      g.strokeStyle = 'rgba(110,130,113,.55)'; g.lineWidth = 1.8; g.stroke();
       drawSpec(SBX + SBW / 2, y + 26, { t: SPEC[i].id, color: 0 }, 15);
       g.fillStyle = C.sub; g.font = '500 10px -apple-system,"PingFang SC",sans-serif';
       g.textAlign = 'center'; g.textBaseline = 'middle';
-      g.fillText(SPEC[i].name + ' ×' + n, SBX + SBW / 2, y + 54);
-      g.globalAlpha = 1;
+      g.fillText(SPEC[i].name + '  ∞', SBX + SBW / 2, y + 54);
     }
   }
 
@@ -762,35 +792,83 @@
     }
   }
 
-  /* ---------- 音效 ---------- */
-  var actx = null, soundOn = true;
+  /* ---------- 音效（WebAudio 现场合成，无外部素材） ---------- */
+  var actx = null, master = null, noiseBuf = null, soundOn = true;
   function ac() {
-    if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; } }
-    if (actx && actx.state === 'suspended') { try { actx.resume(); } catch (e) {} }
+    if (!actx) {
+      try {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        actx = new AC();
+        master = actx.createGain();
+        master.gain.value = 0.9;
+        master.connect(actx.destination);
+        // 预生成一段衰减白噪声，供爆破/掉落音做质感
+        var n = Math.floor(actx.sampleRate * 0.4), i;
+        noiseBuf = actx.createBuffer(1, n, actx.sampleRate);
+        var d = noiseBuf.getChannelData(0);
+        for (i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / n);
+        // iOS 需要在用户手势里播一次（哪怕静音）才真正解锁
+        try {
+          var s = actx.createBufferSource();
+          s.buffer = actx.createBuffer(1, 1, actx.sampleRate);
+          s.connect(master); s.start(0);
+        } catch (e2) {}
+      } catch (e) { actx = null; return null; }
+    }
+    if (actx.state === 'suspended') { try { actx.resume(); } catch (e3) {} }
     return actx;
   }
-  function beep(o) {
+  function env(gn, t0, dur, vol, atk) {
+    gn.gain.setValueAtTime(0.0001, t0);
+    gn.gain.linearRampToValueAtTime(vol, t0 + (atk || 0.008));
+    gn.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+  }
+  // 单音：to 为终点频率时做滑音，det 为失谐量（叠加第二只振荡器让音色更饱满）
+  function tone(o) {
     if (!soundOn) return;
     var a = ac(); if (!a) return;
-    var dur = o.dur || 0.1, vol = o.vol || 0.11, t0 = a.currentTime;
-    var osc = a.createOscillator(), gn = a.createGain();
-    osc.type = o.type || 'sine';
-    osc.frequency.setValueAtTime(o.freq, t0);
-    if (o.to) osc.frequency.exponentialRampToValueAtTime(Math.max(40, o.to), t0 + dur);
-    gn.gain.setValueAtTime(0.0001, t0);
-    gn.gain.linearRampToValueAtTime(vol, t0 + 0.012);
-    gn.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    osc.connect(gn); gn.connect(a.destination);
-    osc.start(t0); osc.stop(t0 + dur + 0.03);
+    var dur = o.dur || 0.1, vol = o.vol == null ? 0.1 : o.vol;
+    var t0 = a.currentTime + (o.delay || 0), det = o.det || 0;
+    for (var k = 0; k < (det ? 2 : 1); k++) {
+      var m = k ? (1 + det) : 1;
+      var osc = a.createOscillator(), gn = a.createGain();
+      osc.type = o.type || 'sine';
+      osc.frequency.setValueAtTime(o.freq * m, t0);
+      if (o.to) osc.frequency.exponentialRampToValueAtTime(Math.max(40, o.to * m), t0 + dur);
+      env(gn, t0, dur, k ? vol * 0.5 : vol, o.atk);
+      osc.connect(gn); gn.connect(master);
+      osc.start(t0); osc.stop(t0 + dur + 0.04);
+    }
+  }
+  // 噪声：给爆破、掉落加一层"气声"
+  function noise(o) {
+    if (!soundOn) return;
+    var a = ac(); if (!a || !noiseBuf) return;
+    var dur = o.dur || 0.12, t0 = a.currentTime + (o.delay || 0);
+    var src = a.createBufferSource(); src.buffer = noiseBuf;
+    var bp = a.createBiquadFilter();
+    bp.type = o.filter || 'bandpass';
+    bp.frequency.setValueAtTime(o.freq || 900, t0);
+    if (o.to) bp.frequency.exponentialRampToValueAtTime(Math.max(80, o.to), t0 + dur);
+    bp.Q.value = o.q || 1.1;
+    var gn = a.createGain();
+    env(gn, t0, dur, o.vol == null ? 0.06 : o.vol, 0.006);
+    src.connect(bp); bp.connect(gn); gn.connect(master);
+    src.start(t0); src.stop(t0 + dur + 0.04);
   }
   var SFX = {
-    shoot: function () { beep({ freq: 420, to: 700, dur: 0.07, vol: 0.07, type: 'triangle' }); },
-    stick: function () { beep({ freq: 260, dur: 0.06, vol: 0.07, type: 'sine' }); },
-    pop: function (n) { beep({ freq: 620 + Math.min(9, n) * 45, to: 900, dur: 0.13, vol: 0.1, type: 'triangle' }); },
-    fall: function () { beep({ freq: 300, to: 120, dur: 0.24, vol: 0.09, type: 'sine' }); },
-    clear: function () { beep({ freq: 560, to: 1080, dur: 0.3, vol: 0.12, type: 'triangle' }); },
-    win: function () { beep({ freq: 600, to: 1220, dur: 0.42, vol: 0.13, type: 'triangle' }); },
-    lose: function () { beep({ freq: 300, to: 90, dur: 0.5, vol: 0.12, type: 'sawtooth' }); }
+    shoot:  function () { tone({ freq: 380, to: 720, dur: 0.08, vol: 0.075, type: 'triangle' }); noise({ freq: 1700, to: 600, dur: 0.055, vol: 0.022 }); },
+    bounce: function () { tone({ freq: 880, to: 600, dur: 0.045, vol: 0.045, type: 'square' }); },
+    stick:  function () { tone({ freq: 250, to: 190, dur: 0.07, vol: 0.075, type: 'sine' }); },
+    pop:    function (n) { var f = 560 + Math.min(10, n) * 46; tone({ freq: f, to: f * 1.75, dur: 0.14, vol: 0.11, type: 'triangle', det: 0.006 }); noise({ freq: 2300, to: 700, dur: 0.13, vol: 0.05 }); },
+    fall:   function () { tone({ freq: 330, to: 105, dur: 0.28, vol: 0.085, type: 'sine' }); noise({ freq: 800, to: 200, dur: 0.24, vol: 0.035, filter: 'lowpass' }); },
+    swap:   function () { tone({ freq: 520, dur: 0.07, vol: 0.08, type: 'sine' }); tone({ freq: 790, dur: 0.08, vol: 0.07, type: 'sine', delay: 0.065 }); },
+    load:   function () { tone({ freq: 300, to: 900, dur: 0.18, vol: 0.1, type: 'triangle' }); },
+    clear:  function () { tone({ freq: 560, to: 1120, dur: 0.3, vol: 0.12, type: 'triangle', det: 0.004 }); },
+    warn:   function () { tone({ freq: 210, to: 150, dur: 0.2, vol: 0.07, type: 'sawtooth' }); },
+    win:    function () { var ns = [523, 659, 784, 1047]; for (var i = 0; i < 4; i++) tone({ freq: ns[i], dur: 0.26, vol: 0.1, type: 'triangle', delay: i * 0.12, det: 0.005 }); },
+    lose:   function () { tone({ freq: 300, to: 80, dur: 0.5, vol: 0.11, type: 'sawtooth' }); }
   };
 
   /* ---------- HUD ---------- */
@@ -826,27 +904,25 @@
     }
     return -1;
   }
-  // 交换待发射球与待选球：右键，或点左下角"下一颗"预览（移动端没有右键）
+  // 交换待发射球与待选球：底部「交换」按钮 / 右键 / S 键
   function swap() {
     if (S.phase !== 'play' || S.ball || S.paused) return false;
     if (!S.cur || !S.next) return false;
     var t = S.cur; S.cur = S.next; S.next = t;
     fx(NX, NY - R - 28, '交换', C.good);
-    SFX.stick(); sync();
+    SFX.swap(); sync();
     return true;
   }
   cv.addEventListener('pointerdown', function (e) {
     ac();
     if (e.button === 2) { e.preventDefault(); return; }   // 右键只用于交换，交给 contextmenu
     var p = local(e);
-    if (Math.hypot(p.x - NX, p.y - NY) < R + 10) { swap(); e.preventDefault(); return; }
     var si = sideIndex(p.x, p.y);
     if (si >= 0) {
-      if (S.phase === 'play' && !S.ball && S.spec[si] > 0) {
-        S.spec[si]--;
+      if (S.phase === 'play' && !S.ball) {          // 特技球无限使用，不再扣数量
         S.cur = { t: SPEC[si].id, color: S.cur ? S.cur.color : 0 };
         fx(LX, LY - 60, SPEC[si].name + '装填', C.good);
-        SFX.stick(); sync();
+        SFX.load(); sync();
       }
       e.preventDefault(); return;
     }
@@ -872,6 +948,7 @@
     if (e.key === 'ArrowLeft') { S.aim = Math.max(-1.31, S.aim - 0.08); e.preventDefault(); }
     else if (e.key === 'ArrowRight') { S.aim = Math.min(1.31, S.aim + 0.08); e.preventDefault(); }
     else if (e.key === ' ') { fire(); e.preventDefault(); }
+    else if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') { swap(); e.preventDefault(); }
   });
 
   /* ---------- 按钮 ---------- */
@@ -885,6 +962,7 @@
       });
     })(modeBtns[mi]);
   }
+  document.getElementById('bSwap').addEventListener('click', function () { ac(); swap(); });
   document.getElementById('bNew').addEventListener('click', function () { start(S.lv); });
   var bPause = document.getElementById('bPause');
   bPause.addEventListener('click', function () {
@@ -913,10 +991,11 @@
 
   window.__bb = {
     S: S, LEVELS: LEVELS, SPEC: SPEC, start: start, step: step, draw: draw,
-    fire: fire, swap: swap, fixColors: fixColors, snap: snap, group: group, dropFloaters: dropFloaters, tracePath: tracePath, afterShot: afterShot,
+    fire: fire, swap: swap, fixColors: fixColors, snap: snap, group: group, dropFloaters: dropFloaters, tracePath: tracePath, afterShot: afterShot, alignCam: alignCam,
+    SFX: SFX, sideIndex: sideIndex,
     cellX: cellX, cellY: cellY, key: key, colsIn: colsIn, nbrs: nbrs,
     R: R, D: D, ROWH: ROWH, FW: FW, VIEW_H: VIEW_H, DANGER: DANGER, LX: LX, LY: LY, NX: NX, NY: NY,
-    TIPY: TIPY, TOPKEEP: TOPKEEP, KEEPR: KEEPR, RPS: RPS
+    TIPY: TIPY, TOPKEEP: TOPKEEP, KEEPR: KEEPR, RPS: RPS, LH: LH, SBX: SBX, SBW: SBW, CEILH: CEILH
   };
 })();
 </script>
