@@ -121,8 +121,10 @@
   var LX = FW / 2, LY = 622;    // 发射口
   var NX = 58, NY = 622;        // 下一颗
   var GRAV = 1500, SPEED = 820, STPX = 4;  // STPX: 弹道积分步长，预测线与实际球体必须一致
-  var TIPY = 300;                          // 每屏推进量：最低泡泡在屏幕上的初始高度
-  var RPS = Math.round(TIPY / ROWH);                 // 每屏行数 = 10
+  var TIPY = 300;                         // 每次滚动后，最低泡泡落在屏幕上的高度
+  var KEEPR = 2;                          // 视口顶部只剩这么多行就开始滚屏（避免残局只能远射）
+  var TOPKEEP = R + (KEEPR - 1) * ROWH;   // 顶部两行的下边界屏幕 y ≈ 49
+  var RPS = Math.max(4, Math.round((TIPY - TOPKEEP) / ROWH));  // 每屏行数 = 8（= 每次滚动真实推进的行数）
 
   var COLORS = ['#C08A76', '#A9A670', '#7CA394', '#8091B4'];
   var C = {
@@ -201,7 +203,10 @@
   // 避免"随机铺完再剪枝"在渗流临界密度下把整条关卡剪短。
   function gen(lv) {
     var L = LEVELS[lv];
-    S.rows = Math.max(8, L.screens * RPS);  // 每屏 RPS 行，总长 = screens 屏
+    // 相机总行程 = lowestY - TIPY，每次滚动推进 (TIPY - TOPKEEP)，
+    // 反推行数使"滚动次数 = screens-1"，屏数计数才能和难度标签对得上。
+    var adv = TIPY - TOPKEEP;
+    S.rows = Math.max(8, Math.round((TIPY + (L.screens - 1) * adv - R) / ROWH) + 1);
     S.grid = new Map();
     var sup = new Set();
     for (var c0 = 0; c0 < CE; c0++) { S.grid.set(key(0, c0), mk(0, c0, (Math.random() * 4) | 0)); sup.add(key(0, c0)); }
@@ -329,6 +334,16 @@
     return best;
   }
 
+  // 场上颜色会随消除而消失，"下一颗"是上一发按当时盘面取的，可能已绝色。
+  // 绝色的球永远凑不成三连，只能徒增泡泡 —— 每次盘面变动后把它重掷成现存颜色。
+  function fixColors() {
+    var has = [false, false, false, false], n = 0;
+    S.grid.forEach(function (b) { if (!has[b.color]) { has[b.color] = true; n++; } });
+    if (!n) return;
+    if (S.cur && S.cur.t === 'n' && !has[S.cur.color]) S.cur = { t: 'n', color: pickColor() };
+    if (S.next && S.next.t === 'n' && !has[S.next.color]) S.next = { t: 'n', color: pickColor() };
+  }
+
   /* ---------- 消除 / 掉落 ---------- */
   function popB(b, why) {
     if (!S.grid.has(key(b.r, b.c))) return;
@@ -423,6 +438,7 @@
     if (popped) { reindex(); SFX.pop(popped); S.shake = Math.min(6, 2 + popped * 0.3); }
     else if (ball.t === 'n') SFX.stick();
     dropFloaters();
+    fixColors();
     afterShot();
   }
 
@@ -430,11 +446,10 @@
     if (S.phase !== 'play') return;
     if (S.grid.size === 0) { finish(true); return; }
     var any = false;
-    S.grid.forEach(function (b) { if (b.y - S.camY > -R) any = true; });
-    if (!any) {
+    S.grid.forEach(function (b) { if (b.y - S.camY > TOPKEEP) any = true; });
+    if (!any) {                       // 视口顶部只剩 KEEPR 行 -> 立即滚屏，不等全清
       S.camT = Math.max(0, lowestY() - TIPY);
-      if (S.camT < S.camY - 1) { S.phase = 'scroll'; fx(LX, 300, '清屏！上移', C.gold); SFX.clear(); }
-      else { finish(true); }
+      if (S.camT < S.camY - 1) { S.phase = 'scroll'; fx(LX, 300, '上移推进', C.gold); SFX.clear(); }
     }
   }
 
@@ -898,9 +913,10 @@
 
   window.__bb = {
     S: S, LEVELS: LEVELS, SPEC: SPEC, start: start, step: step, draw: draw,
-    fire: fire, swap: swap, snap: snap, group: group, dropFloaters: dropFloaters, tracePath: tracePath, afterShot: afterShot,
+    fire: fire, swap: swap, fixColors: fixColors, snap: snap, group: group, dropFloaters: dropFloaters, tracePath: tracePath, afterShot: afterShot,
     cellX: cellX, cellY: cellY, key: key, colsIn: colsIn, nbrs: nbrs,
-    R: R, D: D, ROWH: ROWH, FW: FW, VIEW_H: VIEW_H, DANGER: DANGER, LX: LX, LY: LY, NX: NX, NY: NY
+    R: R, D: D, ROWH: ROWH, FW: FW, VIEW_H: VIEW_H, DANGER: DANGER, LX: LX, LY: LY, NX: NX, NY: NY,
+    TIPY: TIPY, TOPKEEP: TOPKEEP, KEEPR: KEEPR, RPS: RPS
   };
 })();
 </script>
