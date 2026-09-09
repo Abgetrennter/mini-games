@@ -2,6 +2,8 @@
 
 个人自用游戏
 
+在线玩：**<https://abgetrennter.github.io/mini-games/>**
+
 ## 游戏列表
 
 - [试管倒水](./water-sort.html) — 把同色液体倒进同一支管，含巨管模式

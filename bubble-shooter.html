@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="泡泡龙">
-<meta name="theme-color" content="#EDE9E3">
+<html lang="zh-CN" data-page-node-id="qlflf0gabHr7HVcVZ89s1s">
+<head data-page-node-id="4CBWa0NktiPYVSvkrRjABC">
+<meta charset="utf-8" data-page-node-id="zcPRGQLIPiHMr4cYdAsU9T">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover" data-page-node-id="zFnwxLC4kXQnBOY2xkCvrB">
+<meta name="apple-mobile-web-app-capable" content="yes" data-page-node-id="HV6lBmmFupZoyMu0iJ398K">
+<meta name="mobile-web-app-capable" content="yes" data-page-node-id="DBAl83TDEJyC77SLpYvHHo">
+<meta name="apple-mobile-web-app-status-bar-style" content="default" data-page-node-id="kHYiYg88KnpnufUHVaQAVT">
+<meta name="apple-mobile-web-app-title" content="泡泡龙" data-page-node-id="hcPBty37CEOqTrBAMFFpnG">
+<meta name="theme-color" content="#EDE9E3" data-page-node-id="N7zKAW2WZDgXrjygwQvX81">
 <title>泡泡龙</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
@@ -72,40 +72,40 @@
   .card button.pri{background:#7A8D7C;color:#FBF8F3}
 </style>
 </head>
-<body>
-<div id="app">
-  <header>
-    <div class="title">泡泡龙<small>拖动瞄准 · 三连消除 · 断链掉落</small></div>
-    <div class="stats">
-      <div class="stat"><b id="sLeft">0</b><span>剩余</span></div>
-      <div class="stat"><b id="sScreen">1</b><span>屏数</span></div>
-      <div class="stat"><b id="sScore">0</b><span>得分</span></div>
+<body data-page-node-id="cYRlX8I4B1YK1eUV9l8X74">
+<div id="app" data-page-node-id="GSNPKDIGStcDRZJTLrw361">
+  <header data-page-node-id="Fe1t3FCIfb5MjYGGKUTKCN">
+    <div class="title" data-page-node-id="3TVvFHo2petCOWap2dnYlP">泡泡龙<small data-page-node-id="Kh2ZYEJuC3EulTYIEufKBW">拖动瞄准 · 三连消除 · 断链掉落</small></div>
+    <div class="stats" data-page-node-id="eL2VC9TsUofk5qz7qAsA1K">
+      <div class="stat" data-page-node-id="j3NVaEkwSumoBqEMo8y4Qo"><b id="sLeft" data-page-node-id="BiDGSf7cn0D3gxgwRXDnqk">0</b><span data-page-node-id="YnzoeXidOgMGbPxyoVBgpw">剩余</span></div>
+      <div class="stat" data-page-node-id="GcJ2Em1UaXHMx9N9qSrfAo"><b id="sScreen" data-page-node-id="tq9QJBuExJbGUi3lywAypL">1</b><span data-page-node-id="0qT4C4xEAWWn7iflv1oOGm">屏数</span></div>
+      <div class="stat" data-page-node-id="146qNT7oPPa33oOveFa6Po"><b id="sScore" data-page-node-id="qZF6SNKASLlXvfbgrdCfjk">0</b><span data-page-node-id="z1BxRQdiqXxbisBVJQWZrM">得分</span></div>
     </div>
   </header>
 
-  <div class="chips" id="modes">
-    <button data-lv="0" class="on">简单 · 4屏</button>
-    <button data-lv="1">困难 · 8屏</button>
+  <div class="chips" id="modes" data-page-node-id="2IAHkVmRA7Z8f1h1RBDFfx">
+    <button data-lv="0" class="on" data-page-node-id="ciNfy9GN4vT6j1UKCP050L">简单 · 4屏</button>
+    <button data-lv="1" data-page-node-id="Qu53uvyoEGezmTjibnUKII">困难 · 8屏</button>
   </div>
 
-  <div id="wrap"><canvas id="cv"></canvas></div>
+  <div id="wrap" data-page-node-id="JXEmvB3hWqg7bzKImCrS23"><canvas id="cv" data-page-node-id="lAxTPHRweCZ35vqQsN5X6L"></canvas></div>
 
-  <footer>
-    <button id="bSwap" class="acc">交换</button>
-    <button id="bNew">重新开始</button>
-    <button id="bPause">暂停</button>
-    <button id="bSound">音效 开</button>
+  <footer data-page-node-id="1m7JbBsSorZM9OzHf2mVye">
+    <button id="bSwap" class="acc" data-page-node-id="pN2CdIO7VY1hAUziufeYBK">交换</button>
+    <button id="bNew" data-page-node-id="tL095vcmHJHs7JPzmU2QLL">重新开始</button>
+    <button id="bPause" data-page-node-id="RBkFQvMdFDqCwI4f1ZQCuv">暂停</button>
+    <button id="bSound" data-page-node-id="S8Nrx8QsZ41vBdi9BOmitM">音效 开</button>
   </footer>
 
-  <div id="mask" class="show">
-    <div class="card">
-      <h2 id="mTitle">泡泡龙</h2>
-      <p id="mText">在场地里拖动瞄准，松手发射，三颗同色即消除。<br>打掉支撑后，连着天花板的泡泡会整块掉落。<br>右侧侧栏是特技球，无限使用，点一下装填。<br>底部「交换」按钮可交换当前球与待选球。</p>
-      <div class="row"><button class="pri" id="mGo">开始</button></div>
+  <div id="mask" class="show" data-page-node-id="72fMmB7ZCSWzTB38HzVEkM">
+    <div class="card" data-page-node-id="9F1ZUnSjgJ5p4hQcaYY1HA">
+      <h2 id="mTitle" data-page-node-id="c8LImVp0BDrvJu2nhzvj6Z">泡泡龙</h2>
+      <p id="mText" data-page-node-id="STf7PKuHMDHAbDkjdm3NR7">在场地里拖动瞄准，松手发射，三颗同色即消除。<br data-page-node-id="MRZP8VDebahcUTt2IUrVKM">打掉支撑后，连着天花板的泡泡会整块掉落。<br data-page-node-id="CI7n1v3o2F8YTUzMANzQm8">右侧侧栏是特技球，无限使用，点一下装填。<br data-page-node-id="SGtbu2k90DE73hIxSDoa1p">底部「交换」按钮可交换当前球与待选球。</p>
+      <div class="row" data-page-node-id="6Ao6CQKmQ68YsSsKfD1vm2"><button class="pri" id="mGo" data-page-node-id="2Xa6lejj0tIx6wryOcjq3o">开始</button></div>
     </div>
   </div>
 </div>
-<div id="rotate"><div class="ic"></div><p>请竖屏游玩</p></div>
+<div id="rotate" data-page-node-id="FsCPaxFzGGJVXECpPENfJe"><div class="ic" data-page-node-id="cEtw5wjRD3JBS2hLpqFYqW"></div><p data-page-node-id="PaGuSAoJubrS4PIC7KnoGy">请竖屏游玩</p></div>
 
 <script>
 (function () {
