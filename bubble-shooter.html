@@ -125,6 +125,12 @@
   // 所以视口顶边无论如何都会切到边界行的上一排、露出一道细缝。
   // 相机对齐行网格（camY = ROWH*r）后，用一条不透明天花板把它盖住。
   var CEILH = 6;                // 天花板高度（须 > 4.82）
+
+  // 「有效区域」= 当前屏幕 + 往关卡剩余方向再延伸 SPEC_EXTRA 屏。
+  // 关卡有 4/8 屏长，视口上方压着大量看不见的行，所以发射球取色和特技球
+  // 作用范围都必须限定在这条带子里：否则既会出现球色在视口里根本找不到，
+  // 也会让火箭 / 闪电一发打穿整条关卡。
+  var SPEC_EXTRA = 0.5;         // 额外覆盖的屏数
   var LX = FW / 2, LY = 622;    // 发射口
   var NX = 58, NY = 622;        // 下一颗
   var GRAV = 1500, SPEED = 820, STPX = 4;  // STPX: 弹道积分步长，预测线与实际球体必须一致
@@ -146,9 +152,9 @@
   // 特技球
   var SPEC = [
     { id: 'bomb',    name: '炸弹', desc: '炸掉落点周围一圈' },
-    { id: 'rocket',  name: '火箭', desc: '清除落点整列' },
+    { id: 'rocket',  name: '火箭', desc: '清除当前屏内整列' },
     { id: 'rainbow', name: '彩虹', desc: '万能色，吃掉最大同色块' },
-    { id: 'bolt',    name: '闪电', desc: '清除全场同色' }
+    { id: 'bolt',    name: '闪电', desc: '清除当前屏内同色' }
   ];
 
   // clus  = 着色时继承邻居色的概率（越高同色片越大）
@@ -166,7 +172,8 @@
     cur: null, next: null, ball: null,
     pops: [], falls: [], fx: [],
     score: 0, screens: 0, shots: 0,
-    aim: 0, aiming: false, paused: false, shake: 0, warn: false
+    aim: 0, aiming: false, paused: false, shake: 0, warn: false,
+    hist: []                  // 已确定颜色的队列，末尾两项 = cur / next（-1 表示特技球）
   };
 
   /* ---------- 网格 ---------- */
@@ -347,10 +354,11 @@
     S.pops = []; S.falls = []; S.fx = [];
     S.score = 0; S.screens = 1; S.shots = 0;   // screens = 当前所在屏（1 起算）
     S.ball = null; S.aiming = false; S.paused = false; S.shake = 0; S.warn = false;
-    S.cur = { t: 'n', color: pickColor() };
-    S.next = { t: 'n', color: pickColor() };
-    S.camY = alignCam(lowestY() - TIPY);
+    S.camY = alignCam(lowestY() - TIPY);   // 先定相机：取色要按「有效区域」来
     S.camT = S.camY;
+    S.hist = [];                           // 最近确定的颜色队列，末尾两项 = cur / next
+    setCur(pickColor(-1));
+    pushNext(pickColor(banFor()));
     hideMask(); sync();
   }
 
@@ -359,11 +367,64 @@
     S.grid.forEach(function (b) { if (b.y > m) m = b.y; });
     return m;
   }
-  // 按场上颜色数量加权取样（残局也能较快凑成三连），而不是在"出现过的颜色"里均匀取样
-  function pickColor() {
+
+  // 视口内：取色只认这里 —— 玩家必须看得见、打得到这颗颜色
+  function inView(b) { return b.y >= S.camY && b.y <= S.camY + VIEW_H + R * 2; }
+  // 有效区域：视口 + 往上（关卡剩余方向）再延伸 SPEC_EXTRA 屏 —— 特技球的作用范围
+  function inBand(b) { return inView(b) || b.y >= S.camY - RPS * ROWH * SPEC_EXTRA; }
+
+  // S.hist：按发射顺序排列的颜色队列，末尾两项恒为 S.cur / S.next 的颜色（-1 = 特技球）。
+  // 发射时不需要删除元素 —— 打出去的那颗本来就该留在历史里，只把新球追加到队尾。
+  // 注意区分两种语义，混用会让队列尾部不再是 [cur, next]：
+  //   setCur / setNext = 重掷已在手的球 —— 就地替换，队列长度不变
+  //   pushNext         = 新球入队（开局装填 / 发射后补弹）—— 追加到队尾
+  function setCur(c) {
+    S.cur = { t: 'n', color: c };
+    if (S.hist.length >= 2) S.hist[S.hist.length - 2] = c;
+    else if (S.hist.length === 1) S.hist[0] = c;
+    else S.hist.push(c);
+  }
+  function setNext(c) {
+    S.next = { t: 'n', color: c };
+    if (S.hist.length) S.hist[S.hist.length - 1] = c;
+    else S.hist.push(c);
+  }
+  function pushNext(c) {
+    S.next = { t: 'n', color: c };
+    S.hist.push(c);
+    if (S.hist.length > 8) S.hist.shift();
+  }
+  // 末尾两颗已确定（cur / next）同色时禁掉第三颗同色 —— 避免出现三次以上连续同色
+  function banFor() {
+    var h = S.hist, n = h.length;
+    if (n >= 2 && h[n - 1] >= 0 && h[n - 1] === h[n - 2]) return h[n - 1];
+    return -1;
+  }
+
+  // 指定范围内的颜色计数；范围为空（残局 / 极端视角）时退回整场
+  function bandCnt(f) {
+    var cnt = [0, 0, 0, 0], n = 0, i;
+    S.grid.forEach(function (b) { if (f(b)) cnt[b.color]++; });
+    for (i = 0; i < 4; i++) if (cnt[i]) n++;
+    if (!n) {
+      S.grid.forEach(function (b) { cnt[b.color]++; });
+      for (i = 0; i < 4; i++) if (cnt[i]) n++;
+    }
+    return cnt;
+  }
+
+  // 按视口内颜色数量加权取样（残局也能较快凑成三连），
+  // 而不是在"出现过的颜色"里均匀取样；ban 为禁选色（避免三连同色）
+  function pickColor(ban) {
     var arr = [];
-    S.grid.forEach(function (b) { arr.push(b.color); });
+    S.grid.forEach(function (b) { if (inView(b)) arr.push(b.color); });
+    if (!arr.length) S.grid.forEach(function (b) { arr.push(b.color); });
     if (!arr.length) return (Math.random() * 4) | 0;
+    if (ban >= 0) {
+      var ok = [];
+      for (var i = 0; i < arr.length; i++) if (arr[i] !== ban) ok.push(arr[i]);
+      if (ok.length) arr = ok;             // 全被禁（区域里只剩一种色）时放宽
+    }
     return arr[(Math.random() * arr.length) | 0];
   }
 
@@ -411,14 +472,33 @@
     return best;
   }
 
-  // 场上颜色会随消除而消失，"下一颗"是上一发按当时盘面取的，可能已绝色。
-  // 绝色的球永远凑不成三连，只能徒增泡泡 —— 每次盘面变动后把它重掷成现存颜色。
+  // 颜色会随消除而消失，而且关卡是 4/8 屏长 —— "下一颗"是上一发按当时盘面取的，
+  // 可能已经绝色、也可能滚屏后落到视口外。绝色的球永远凑不成三连，徒增泡泡，
+  // 所以每次盘面 / 视口变动后都把它重掷成视口里现存的颜色。
   function fixColors() {
-    var has = [false, false, false, false], n = 0;
-    S.grid.forEach(function (b) { if (!has[b.color]) { has[b.color] = true; n++; } });
-    if (!n) return;
-    if (S.cur && S.cur.t === 'n' && !has[S.cur.color]) S.cur = { t: 'n', color: pickColor() };
-    if (S.next && S.next.t === 'n' && !has[S.next.color]) S.next = { t: 'n', color: pickColor() };
+    var cnt = bandCnt(inView);
+    if (S.cur && S.cur.t === 'n' && !cnt[S.cur.color]) setCur(pickColor(banFor()));
+    if (S.next && S.next.t === 'n' && !cnt[S.next.color]) setNext(pickColor(banFor()));
+    dedupe();
+  }
+
+  // 兜底：手里两颗 + 上一发构成三连同色时重掷最后一颗。
+  // banFor 只在"生成"那一刻生效，而 fixColors 会在事后改写 cur —— 那时上一发
+  // 已经打出去了，不重查就会漏出 A,A,A。视口只剩单色时重掷不掉，只能放行。
+  function dedupe() {
+    var h = S.hist, n = h.length;
+    if (n < 3) return;
+    // 可被改写的只有队尾两项：cur = h[n-2]、next = h[n-1]，更早的都是已发射的历史。
+    // 所以要查的只有"以 cur 结尾"和"以 next 结尾"这两个三连窗口。
+    if (n >= 4 && h[n - 2] >= 0 && h[n - 2] === h[n - 3] && h[n - 2] === h[n - 4]) {
+      var nc = pickColor(h[n - 2]);        // fixColors 重掷 cur 可能撞出这一档
+      if (nc !== h[n - 2]) setCur(nc);
+    }
+    var c = h[n - 1];
+    if (c >= 0 && c === h[n - 2] && c === h[n - 3]) {
+      var nn = pickColor(c);               // 补弹时 banFor 已挡过一次，这是兜底
+      if (nn !== c) setNext(nn);
+    }
   }
 
   /* ---------- 消除 / 掉落 ---------- */
@@ -474,22 +554,25 @@
       var lim = 62 * 62;
       var list = [];
       S.grid.forEach(function (b) {
+        if (!inBand(b)) return;
         var dx = b.x - ball.x, dy = b.y - ball.y;
         if (dx * dx + dy * dy < lim) list.push(b);
       });
       popped = list.length; for (var i = 0; i < list.length; i++) popB(list[i]);
-      fx(ball.x, ball.y - S.camY, 'BOOM', C.bad);
+      fx(ball.x, ball.y - S.camY, 'BOOM +' + list.length, C.bad);
     } else if (ball.t === 'rocket') {
+      // 只清有效区域里的那一列：整条关卡 4/8 屏，不限范围的话一发就打穿了
       var l2 = [];
-      S.grid.forEach(function (b) { if (Math.abs(b.x - ball.x) < 24) l2.push(b); });
+      S.grid.forEach(function (b) { if (inBand(b) && Math.abs(b.x - ball.x) < 24) l2.push(b); });
       popped = l2.length; for (var j = 0; j < l2.length; j++) popB(l2[j]);
-      fx(ball.x, ball.y - S.camY, '整列清除', C.good);
+      fx(ball.x, ball.y - S.camY, '整列清除 +' + l2.length, C.good);
     } else if (ball.t === 'bolt') {
-      var col = ball.hitColor;
-      if (col == null) { var cnt = [0, 0, 0, 0]; S.grid.forEach(function (b) { cnt[b.color]++; }); col = 0; for (var q = 1; q < 4; q++) if (cnt[q] > cnt[col]) col = q; }
-      var l3 = []; S.grid.forEach(function (b) { if (b.color === col) l3.push(b); });
+      // 同样只清有效区域：命中色的选取也按区域计数，避免挑到一个区域里没有的色
+      var cnt2 = bandCnt(inBand), col = ball.hitColor;
+      if (col == null || !cnt2[col]) { col = 0; for (var q = 1; q < 4; q++) if (cnt2[q] > cnt2[col]) col = q; }
+      var l3 = []; S.grid.forEach(function (b) { if (inBand(b) && b.color === col) l3.push(b); });
       popped = l3.length; for (var m = 0; m < l3.length; m++) popB(l3[m]);
-      fx(ball.x, ball.y - S.camY, '全色清除', C.good);
+      fx(ball.x, ball.y - S.camY, '同色清除 +' + l3.length, C.good);
     } else if (ball.t === 'rainbow') {
       var placed = S.grid.get(key(cellOrNull.r, cellOrNull.c)) || ball.placed;
       var best = null, bestN = 0, tried = {};
@@ -539,8 +622,9 @@
       vx: Math.sin(a) * SPEED, vy: -Math.cos(a) * SPEED, hitColor: null, acc: 0
     };
     S.shots++;
+    var ban = banFor();                    // 先按 [cur, next] 算禁色，再换弹
     S.cur = S.next;
-    S.next = { t: 'n', color: pickColor() };
+    pushNext(pickColor(ban));              // 队列尾部仍保持 = cur / next
     SFX.shoot();
   }
 
@@ -574,7 +658,7 @@
     if (b.t === 'n' || b.t === 'rainbow') {
       var c0 = snap(b.x, b.y);
       if (c0 && !S.grid.has(key(c0.r, c0.c))) {
-        var nb = mk(c0.r, c0.c, b.t === 'rainbow' ? (hit ? hit.color : pickColor()) : b.color);
+        var nb = mk(c0.r, c0.c, b.t === 'rainbow' ? (hit ? hit.color : pickColor(-1)) : b.color);
         S.grid.set(key(c0.r, c0.c), nb);
         reindex();
         cell = c0;
@@ -609,6 +693,7 @@
       S.camY += (S.camT - S.camY) * Math.min(1, dt * 6);
       if (Math.abs(S.camT - S.camY) < 1.2) {
         S.camY = S.camT; S.phase = 'play'; S.screens++;
+        fixColors();                       // 视口换了，手里的球色可能已落在新区域之外
         if (S.grid.size === 0) finish(true);
       }
       sync(); return;
@@ -967,6 +1052,8 @@
     if (S.phase !== 'play' || S.ball || S.paused) return false;
     if (!S.cur || !S.next) return false;
     var t = S.cur; S.cur = S.next; S.next = t;
+    var h = S.hist, th = h[h.length - 1];            // 队列尾部跟着一起换
+    if (h.length >= 2) { h[h.length - 1] = h[h.length - 2]; h[h.length - 2] = th; }
     fx(NX, NY - R - 28, '交换', C.good);
     SFX.swap(); sync();
     return true;
@@ -979,6 +1066,7 @@
     if (si >= 0) {
       if (S.phase === 'play' && !S.ball) {          // 特技球无限使用，不再扣数量
         S.cur = { t: SPEC[si].id, color: S.cur ? S.cur.color : 0 };
+        if (S.hist.length >= 2) S.hist[S.hist.length - 2] = -1;   // 特技球不计入同色连发统计
         fx(LX, LY - 60, SPEC[si].name + '装填', C.good);
         SFX.load(); sync();
       }
@@ -1050,10 +1138,13 @@
   window.__bb = {
     S: S, LEVELS: LEVELS, SPEC: SPEC, start: start, step: step, draw: draw,
     fire: fire, swap: swap, fixColors: fixColors, snap: snap, group: group, dropFloaters: dropFloaters, tracePath: tracePath, afterShot: afterShot, alignCam: alignCam,
+    pickColor: pickColor, inBand: inBand, inView: inView, bandCnt: bandCnt,
+    banFor: banFor, setCur: setCur, setNext: setNext, pushNext: pushNext, dedupe: dedupe,
     SFX: SFX, sideIndex: sideIndex,
     cellX: cellX, cellY: cellY, key: key, colsIn: colsIn, nbrs: nbrs,
     R: R, D: D, ROWH: ROWH, FW: FW, VIEW_H: VIEW_H, DANGER: DANGER, LX: LX, LY: LY, NX: NX, NY: NY,
-    TIPY: TIPY, TOPKEEP: TOPKEEP, KEEPR: KEEPR, RPS: RPS, LH: LH, SBX: SBX, SBW: SBW, CEILH: CEILH
+    TIPY: TIPY, TOPKEEP: TOPKEEP, KEEPR: KEEPR, RPS: RPS, LH: LH, SBX: SBX, SBW: SBW, CEILH: CEILH,
+    SPEC_EXTRA: SPEC_EXTRA
   };
 })();
 </script>
