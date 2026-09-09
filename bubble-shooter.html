@@ -84,8 +84,8 @@
   </header>
 
   <div class="chips" id="modes">
-    <button data-lv="0" class="on">简单 · 2屏</button>
-    <button data-lv="1">困难 · 4屏</button>
+    <button data-lv="0" class="on">简单 · 4屏</button>
+    <button data-lv="1">困难 · 8屏</button>
   </div>
 
   <div id="wrap"><canvas id="cv"></canvas></div>
@@ -154,8 +154,8 @@
   // clus  = 着色时继承邻居色的概率（越高同色片越大）
   // smooth= 孤色球（四周无同色）并入邻居多数色的概率，跑两遍
   var LEVELS = [
-    { name: '简单', screens: 2, dens: 0.62, clus: 0.15, smooth: 0.45 },
-    { name: '困难', screens: 4, dens: 0.68, clus: 0.15, smooth: 0.42 }
+    { name: '简单', screens: 4, dens: 0.62, clus: 0.15, smooth: 0.45 },
+    { name: '困难', screens: 8, dens: 0.68, clus: 0.15, smooth: 0.42 }
   ];
 
   /* ---------- 状态 ---------- */
@@ -249,13 +249,24 @@
       // 补足到目标数量（沿着已支撑的格子往外长）
       var target = Math.max(2, Math.round(d * cols)), guard = 0;
       while (inRow.size < target && guard++ < 90) {
-        if (!q.length) { // 整行都没支撑：强行给个父节点
-          var rc = (Math.random() * cols) | 0, pp = parents(r, rc);
-          if (!pp.length) continue;
-          var pk = key(pp[0][0], pp[0][1]);
-          if (!S.grid.has(pk)) S.grid.set(pk, mk(pp[0][0], pp[0][1], (Math.random() * 4) | 0));
-          var rk = key(r, rc);
-          if (!S.grid.has(rk)) { S.grid.set(rk, mk(r, rc, (Math.random() * 4) | 0)); inRow.add(rk); q.push(rc); }
+        if (!q.length) {
+          // 整行都没支撑：只能挑一列，且该列的父节点必须**确实在 sup 里**。
+          // 旧代码是"凭空在上一行造一个父节点"，而那个节点本身并不连通 ——
+          // 一旦发生，本行及之后所有行都会挂在这个悬空节点上（关卡越长越容易命中）。
+          var st0 = (Math.random() * cols) | 0, got = false;
+          for (var t = 0; t < cols && !got; t++) {
+            var rc2 = (st0 + t) % cols, pp2 = parents(r, rc2);
+            for (var j2 = 0; j2 < pp2.length; j2++) {
+              if (!sup.has(key(pp2[j2][0], pp2[j2][1]))) continue;
+              var rk2 = key(r, rc2);
+              if (!S.grid.has(rk2)) S.grid.set(rk2, mk(r, rc2, (Math.random() * 4) | 0));
+              inRow.add(rk2); q.push(rc2); got = true;
+              break;
+            }
+          }
+          // 兜底：上一行一个支撑都没有时才可能走到这（理论上不会发生），
+          // 直接停止生成，避免继续往下接出成片悬空泡泡。
+          if (!got) { r = S.rows; break; }
           continue;
         }
         var base = q[(Math.random() * q.length) | 0];
