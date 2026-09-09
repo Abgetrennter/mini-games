@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="麻将连连看">
+<meta name="theme-color" content="#EDE9E3">
+<title>麻将连连看</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#EDE9E3}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Helvetica Neue","Microsoft YaHei",sans-serif;
+    color:#4A4741;
+    -webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+  }
+  #app{
+    position:relative;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:radial-gradient(120% 80% at 50% 0%,#FAF7F2 0%,#E4DFD7 62%);
+  }
+  header{
+    flex:0 0 auto;
+    padding:14px 16px 8px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .title{font-size:17px;font-weight:600;letter-spacing:1px}
+  .title small{display:block;font-size:11px;font-weight:400;color:#9C948A;letter-spacing:0;margin-top:2px}
+  .stats{display:flex;align-items:center;gap:16px}
+  .stat{text-align:right;line-height:1.1}
+  .stat b{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:10px;color:#9C948A;margin-top:1px}
+  .chips{flex:0 0 auto;display:flex;gap:8px;padding:2px 16px 8px}
+  .chips button{
+    flex:1;padding:8px 0;font-size:12px;font-family:inherit;color:#7B746B;
+    background:rgba(255,255,255,.62);border:1px solid rgba(74,71,65,.14);
+    border-radius:999px;cursor:pointer;transition:.18s;
+  }
+  .chips button.on{background:rgba(122,141,124,.26);border-color:rgba(110,130,113,.6);color:#3F4A41}
+  #wrap{flex:1 1 auto;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  footer{flex:0 0 auto;display:flex;gap:7px;padding:10px 14px 16px}
+  footer button{
+    flex:1;padding:13px 0;font-size:13px;font-family:inherit;color:#57524B;
+    background:rgba(255,255,255,.66);border:1px solid rgba(74,71,65,.13);
+    border-radius:12px;cursor:pointer;transition:.15s;
+  }
+  footer button:active{background:rgba(74,71,65,.09)}
+  footer button:disabled{opacity:.32;cursor:default}
+  footer button i{font-style:normal;font-size:11px;color:#9C948A;margin-left:2px}
+  #mask{
+    position:absolute;inset:0;z-index:20;display:none;
+    align-items:center;justify-content:center;background:rgba(237,233,227,.86);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  }
+  #mask.show{display:flex}
+  .card{text-align:center;padding:28px 30px;border-radius:20px;background:#FBF8F3;border:1px solid rgba(74,71,65,.12);min-width:244px}
+  .card h2{font-size:20px;font-weight:600;margin-bottom:6px}
+  .card p{font-size:13px;color:#8A837A;margin-bottom:20px;white-space:pre-line;line-height:1.7}
+  .card .row{display:flex;gap:10px}
+  .card button{
+    flex:1;padding:11px 0;font-size:14px;font-family:inherit;border-radius:11px;cursor:pointer;border:none;
+    background:rgba(74,71,65,.07);color:#57524B;
+  }
+  .card button.pri{background:#7A8D7C;color:#fff}
+  .card button:disabled{opacity:.35;cursor:default}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="title">麻将连连看<small id="sub">翻开同色牌，一层层拆掉牌堆</small></div>
+    <div class="stats">
+      <div class="stat"><b id="rem">0</b><span>剩余</span></div>
+      <div class="stat"><b id="tm">0:00</b><span>用时</span></div>
+    </div>
+  </header>
+
+  <div class="chips" id="chips">
+    <button data-l="0">简单 · 72 张</button>
+    <button data-l="1">困难 · 144 张</button>
+  </div>
+
+  <div id="wrap"><canvas id="c"></canvas></div>
+
+  <footer>
+    <button id="bHint">提示<i id="nHint">0</i></button>
+    <button id="bShuf">洗牌<i id="nShuf">0</i></button>
+    <button id="bUndo">撤销<i id="nUndo">0</i></button>
+    <button id="bNew">重开</button>
+    <button id="bSnd">音效</button>
+  </footer>
+
+  <div id="mask">
+    <div class="card">
+      <h2 id="wt">通关</h2>
+      <p id="wp">用时 0:00</p>
+      <div class="row">
+        <button id="wa">再来一局</button>
+        <button id="wb" class="pri">换个难度</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     常量
+     ========================================================= */
+  var TW = 30, TH = 38;        // 单张牌的逻辑尺寸，整体再按可用区域缩放
+  var GAP = 2;                 // 牌与牌之间的缝隙
+  var DX = 3, DY = 4;          // 牌的厚度，朝右下方
+  var SHX = 0.20, SHY = 0.26;  // 每高一层向右 / 向上的偏移（占牌尺寸）
+  var HINT_MS = 2600;          // 提示高亮持续时间
+  var FX_MS = 340;             // 消除动画时长
+  var FONT = '-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif';
+
+  var C = {
+    txt: '#4A4741', sub: '#9C948A', good: '#7A8D7C', bad: '#C07870',
+    gold: '#C0A05E', edge: '#D9D2C6', dim: '#E3DDD3'
+  };
+
+  /* ---------------------------------------------------------
+     牌面定义
+     0-8  万 1-9    9-17 条 1-9   18-26 筒 1-9
+     27-30 东南西北  31 中  32 发  33 白板
+     34-37 春夏秋冬（季，四张互配）
+     38-41 梅兰竹菊（花，四张互配）
+     --------------------------------------------------------- */
+  var KINDS = (function () {
+    var NUM = ['一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    var SEA = ['春', '夏', '秋', '冬'];
+    var FLO = ['梅', '兰', '竹', '菊'];
+    var a = [], i;
+    for (i = 0; i < 9; i++) a.push({ big: NUM[i], small: '万', c: '#4A4741', face: '#F8F5EF' });
+    for (i = 0; i < 9; i++) a.push({ big: NUM[i], small: '条', c: '#6E8B72', face: '#F1F5F1' });
+    for (i = 0; i < 9; i++) a.push({ big: NUM[i], small: '筒', c: '#7E8FAE', face: '#EFF2F7' });
+    var Z = [['东', '#4A4741'], ['南', '#4A4741'], ['西', '#4A4741'], ['北', '#4A4741'],
+             ['中', '#C07870'], ['发', '#6E8B72']];
+    for (i = 0; i < Z.length; i++) a.push({ big: Z[i][0], small: '', c: Z[i][1], face: '#F8F5EF' });
+    a.push({ big: '', small: '', c: '#8A847A', face: '#F8F5EF', blank: true });   // 白板
+    for (i = 0; i < 4; i++) a.push({ big: SEA[i], small: '季', c: '#B08A4E', face: '#F9F5EA' });
+    for (i = 0; i < 4; i++) a.push({ big: FLO[i], small: '花', c: '#B08A4E', face: '#F9F5EA' });
+    return a;
+  })();
+
+  // 配对键：春夏秋冬四张互配，梅兰竹菊四张互配，其余必须完全相同
+  function matchKey(k) { return k >= 38 ? 100 : (k >= 34 ? 101 : k); }
+
+  /* ---------------------------------------------------------
+     牌阵：每层的 ox/oy 是格子偏移，rows 里 X 表示有牌
+     --------------------------------------------------------- */
+  var LAYOUTS = [
+    {   // 简单 · 金字塔 44 + 24 + 4 = 72
+      name: '金字塔',
+      layers: [
+        { ox: 0, oy: 0, rows: [
+          '.XXXXXX.',
+          'XXXXXXXX',
+          'XXXXXXXX',
+          'XXXXXXXX',
+          'XXXXXXXX',
+          '.XXXXXX.'
+        ] },
+        { ox: 1, oy: 1, rows: ['XXXXXX', 'XXXXXX', 'XXXXXX', 'XXXXXX'] },
+        { ox: 3, oy: 2, rows: ['XX', 'XX'] }
+      ]
+    },
+    {   // 困难 · 龟甲 86 + 36 + 16 + 4 + 2 = 144
+      name: '龟甲',
+      layers: [
+        { ox: -1, oy: 0, rows: [
+          '.XXXXXXXXXXXX.',
+          '...XXXXXXXX...',
+          '..XXXXXXXXXX..',
+          'XXXXXXXXXXXXXX',
+          '.XXXXXXXXXXXX.',
+          '..XXXXXXXXXX..',
+          '...XXXXXXXX...',
+          '.XXXXXXXXXXXX.'
+        ] },
+        { ox: 3, oy: 1, rows: ['XXXXXX', 'XXXXXX', 'XXXXXX', 'XXXXXX', 'XXXXXX', 'XXXXXX'] },
+        { ox: 4, oy: 2, rows: ['XXXX', 'XXXX', 'XXXX', 'XXXX'] },
+        { ox: 5, oy: 3, rows: ['XX', 'XX'] },
+        { ox: 5, oy: 3, rows: ['XX'] }
+      ]
+    }
+  ];
+
+  var LEVELS = [
+    { name: '简单', layout: 0, deck: 'basic', hint: 6, shuffle: 3, undo: 8 },
+    { name: '困难', layout: 1, deck: 'full', hint: 4, shuffle: 5, undo: 6 }
+  ];
+
+  /* =========================================================
+     工具
+     ========================================================= */
+  function shuffleArr(a) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = (Math.random() * (i + 1)) | 0, t = a[i];
+      a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  /* =========================================================
+     状态
+     ========================================================= */
+  var S = {
+    lv: 0,
+    tiles: [],        // 全部牌（含已消除的），{id,x,y,z,kind,alive}
+    order: [],        // 绘制顺序（按下标索引 S.tiles）
+    sel: -1,
+    hintA: -1, hintB: -1, hintT: 0,
+    fx: [],
+    hist: [],
+    hint: 0, shuffle: 0, undo: 0,
+    t0: 0, elapsed: 0,
+    phase: 'play',    // play | win | dead
+    shake: 0, shakeId: -1
+  };
+
+  /* =========================================================
+     牌阵构建
+     ========================================================= */
+  function buildTiles(lv) {
+    var lay = LAYOUTS[LEVELS[lv].layout], out = [], id = 0;
+    for (var li = 0; li < lay.layers.length; li++) {
+      var L = lay.layers[li];
+      for (var r = 0; r < L.rows.length; r++) {
+        var row = L.rows[r];
+        for (var c = 0; c < row.length; c++) {
+          if (row.charAt(c) !== 'X') continue;
+          out.push({
+            id: id++, x: L.ox + c, y: L.oy + r, z: li,
+            kind: 0, alive: true
+          });
+        }
+      }
+    }
+    return out;
+  }
+
+  // 牌 t 是否「自由」：上方没被压住，且左右至少一边是空的
+  function isFreeAt(tiles, i, alive) {
+    var t = tiles[i];
+    if (alive && !alive[i]) return false;
+    var j, o, dl = false, dr = false;
+    for (j = 0; j < tiles.length; j++) {
+      if (j === i) continue;
+      if (alive && !alive[j]) continue;
+      o = tiles[j];
+      if (o.z > t.z && Math.abs(o.x - t.x) < 1 && Math.abs(o.y - t.y) < 1) return false;
+      if (o.z === t.z && o.y === t.y && Math.abs(o.x - t.x) === 1) {
+        if (o.x < t.x) dl = true; else dr = true;
+      }
+    }
+    return !(dl && dr);
+  }
+
+  // 生成一条「保证可解」的拆解顺序：每次从**同一份**自由牌清单里挑两张配成一对。
+  // 注意必须同时挑：游戏里一对牌是一起消掉的，如果先摘掉 a 再挑 b，
+  // b 可能只是「因为 a 没了才自由」，玩家实际无法同时点掉这两张。
+  function tryOrder(tiles, relax) {
+    var n = tiles.length, alive = new Array(n), i;
+    for (i = 0; i < n; i++) alive[i] = true;
+    var out = [], left = n;
+    while (left >= 2) {
+      var free = [];
+      for (i = 0; i < n; i++) if (alive[i] && isFreeAt(tiles, i, alive)) free.push(i);
+      if (free.length < 2) break;
+      var ia = (Math.random() * free.length) | 0, a = free[ia];
+      var rest = free.slice(0, ia).concat(free.slice(ia + 1));
+      var b = rest[(Math.random() * rest.length) | 0];
+      alive[a] = false; alive[b] = false; left -= 2;
+      out.push([a, b]);
+    }
+    if (left === 0) return out;
+    if (!relax) return null;
+    var rem = [];
+    for (i = 0; i < n; i++) if (alive[i]) rem.push(i);
+    for (i = 0; i + 1 < rem.length; i += 2) out.push([rem[i], rem[i + 1]]);
+    return out;
+  }
+  function genOrder(tiles) {
+    for (var k = 0; k < 60; k++) {
+      var r = tryOrder(tiles, false);
+      if (r) return r;
+    }
+    return tryOrder(tiles, true);
+  }
+
+  // 把牌按配对键分组，组内两两配对，得到与拆解顺序等长的一对列表
+  function buildPairs(deck) {
+    var groups = {}, keys = [], i;
+    for (i = 0; i < deck.length; i++) {
+      var k = matchKey(deck[i]);
+      if (!groups[k]) { groups[k] = []; keys.push(k); }
+      groups[k].push(deck[i]);
+    }
+    var pairs = [];
+    for (i = 0; i < keys.length; i++) {
+      var arr = shuffleArr(groups[keys[i]]);
+      for (var j = 0; j + 1 < arr.length; j += 2) pairs.push([arr[j], arr[j + 1]]);
+    }
+    return shuffleArr(pairs);
+  }
+
+  function makeDeck(lv) {
+    var d = [], i;
+    if (LEVELS[lv].deck === 'basic') {
+      for (i = 0; i < 9; i++) d.push(i, i, i, i);          // 万 1-9
+      for (i = 18; i < 27; i++) d.push(i, i, i, i);        // 筒 1-9
+    } else {
+      for (i = 0; i < 34; i++) d.push(i, i, i, i);         // 数牌 + 字牌
+      d.push(34, 35, 36, 37);                              // 春夏秋冬
+      d.push(38, 39, 40, 41);                              // 梅兰竹菊
+    }
+    return d;
+  }
+
+  function start(lv) {
+    S.lv = lv;
+    var L = LEVELS[lv];
+    S.tiles = buildTiles(lv);
+    var order = genOrder(S.tiles);
+    var pairs = buildPairs(makeDeck(lv));
+    for (var i = 0; i < order.length && i < pairs.length; i++) {
+      S.tiles[order[i][0]].kind = pairs[i][0];
+      S.tiles[order[i][1]].kind = pairs[i][1];
+    }
+    S.order = S.tiles.map(function (t, i) { return i; });
+    S.order.sort(function (a, b) {
+      var A = S.tiles[a], B = S.tiles[b];
+      return (A.z - B.z) || (A.y - B.y) || (A.x - B.x);
+    });
+    S.sol = order;                 // 发牌顺序，同时也是一组可行解
+    S.sel = -1; S.hintA = -1; S.hintB = -1; S.hintT = 0;
+    S.fx = []; S.hist = [];
+    S.hint = L.hint; S.shuffle = L.shuffle; S.undo = L.undo;
+    S.t0 = now(); S.elapsed = 0;
+    S.phase = 'play'; S.shake = 0; S.shakeId = -1;
+    hideMask();
+    fitLayout();
+    sync();
+  }
+
+  /* =========================================================
+     逻辑
+     ========================================================= */
+  function now() { return (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now(); }
+
+  function aliveTiles() {
+    var out = [];
+    for (var i = 0; i < S.tiles.length; i++) if (S.tiles[i].alive) out.push(S.tiles[i]);
+    return out;
+  }
+  function aliveCount() {
+    var n = 0;
+    for (var i = 0; i < S.tiles.length; i++) if (S.tiles[i].alive) n++;
+    return n;
+  }
+  function isFree(t) {
+    if (!t || !t.alive) return false;
+    var i, o, dl = false, dr = false;
+    for (i = 0; i < S.tiles.length; i++) {
+      o = S.tiles[i];
+      if (o === t || !o.alive) continue;
+      if (o.z > t.z && Math.abs(o.x - t.x) < 1 && Math.abs(o.y - t.y) < 1) break;
+      if (o.z === t.z && o.y === t.y && Math.abs(o.x - t.x) === 1) {
+        if (o.x < t.x) dl = true; else dr = true;
+      }
+    }
+    if (i >= S.tiles.length && !(dl && dr)) return true;   // 循环没被 break 掉 = 上方无遮挡
+    // 收官规则：只剩两张牌时它们必定同组（每次都是成对拿走的），但有可能
+    // 一张正好压在另一张上 —— 下面那张永远等不到「自由」，直接放行收尾，
+    // 否则玩家会卡在最后两张无法通关（实测贪心打法 25% 会撞上）。
+    if (aliveCount() === 2) {
+      var v2 = aliveTiles();
+      if (v2.length === 2 && matchKey(v2[0].kind) === matchKey(v2[1].kind)) return true;
+    }
+    return false;
+  }
+  function freeList() {
+    var out = [];
+    for (var i = 0; i < S.tiles.length; i++) if (isFree(S.tiles[i])) out.push(S.tiles[i]);
+    return out;
+  }
+  // 找一对当前可以消除的牌
+  function findPair() {
+    var f = freeList(), seen = {};
+    for (var i = 0; i < f.length; i++) {
+      var k = matchKey(f[i].kind);
+      if (seen[k] != null) return [S.tiles[seen[k]], f[i]];
+      seen[k] = f[i].id;
+    }
+    return null;
+  }
+
+  function removePair(a, b) {
+    a.alive = false; b.alive = false;
+    S.hist.push([a.id, b.id]);
+    S.fx.push({ kind: a.kind, x: a.x, y: a.y, z: a.z, t0: now() });
+    S.fx.push({ kind: b.kind, x: b.x, y: b.y, z: b.z, t0: now() });
+    SFX.match();
+    S.sel = -1;
+    S.hintA = -1; S.hintB = -1;
+    if (aliveCount() === 0) {
+      S.elapsed = now() - S.t0;
+      S.phase = 'win';
+      SFX.win();
+      showWin();
+    } else if (!findPair()) {
+      S.phase = 'dead';
+      SFX.dead();
+      showDead();
+    }
+    sync();
+  }
+
+  function undoTurn() {
+    if (S.phase !== 'play' || !S.hist.length || S.undo <= 0) return;
+    var p = S.hist.pop();
+    S.tiles[p[0]].alive = true;
+    S.tiles[p[1]].alive = true;
+    S.undo--;
+    S.sel = -1; S.hintA = -1; S.hintB = -1;
+    SFX.undo();
+    sync();
+  }
+
+  // 洗牌：把剩余牌的花色重新随机分配（多重集不变，所以仍然配得上），
+  // 直到至少存在一组可消除的牌
+  function shuffleBoard() {
+    if (!aliveCount()) return false;
+    var live = aliveTiles(), kinds = live.map(function (t) { return t.kind; }), i;
+    for (var tries = 0; tries < 40; tries++) {
+      var flat = [];
+      var pairs = buildPairs(kinds.slice());
+      for (i = 0; i < pairs.length; i++) flat.push(pairs[i][0], pairs[i][1]);
+      shuffleArr(flat);
+      for (i = 0; i < live.length; i++) live[i].kind = flat[i];
+      if (findPair()) { SFX.shuffle(); S.sel = -1; S.hintA = -1; S.hintB = -1; sync(); return true; }
+    }
+    // 兜底：只做「两张牌互换花色」，多重集依旧不变，穷举到出现可消组合
+    var f = freeList();
+    if (f.length >= 2) {
+      var b = f[1];
+      for (i = 0; i < live.length; i++) {
+        var t = live[i];
+        if (t === b) continue;
+        var tmp = t.kind; t.kind = b.kind; b.kind = tmp;
+        if (findPair()) { SFX.shuffle(); S.sel = -1; S.hintA = -1; S.hintB = -1; sync(); return true; }
+        var back = t.kind; t.kind = b.kind; b.kind = back;
+      }
+    }
+    SFX.bad();
+    return false;
+  }
+
+  function useHint() {
+    if (S.phase !== 'play' || S.hint <= 0) return;
+    var p = findPair();
+    if (!p) { SFX.bad(); return; }
+    S.hint--;
+    S.hintA = p[0].id; S.hintB = p[1].id; S.hintT = now();
+    SFX.hint();
+    sync();
+  }
+
+  /* =========================================================
+     输入
+     ========================================================= */
+  function tapAt(cx, cy) {
+    if (S.phase !== 'play') return;
+    var lx = (cx - LAY.ox) / LAY.s, ly = (cy - LAY.oy) / LAY.s;
+    var hit = null;
+    for (var i = S.order.length - 1; i >= 0; i--) {
+      var t = S.tiles[S.order[i]];
+      if (!t.alive) continue;
+      var px = t.x * TW + t.z * TW * SHX, py = t.y * TH - t.z * TH * SHY;
+      if (lx >= px && lx <= px + TW - GAP && ly >= py && ly <= py + TH - GAP) { hit = t; break; }
+    }
+    if (!hit) return;
+    if (!isFree(hit)) { S.shake = now(); S.shakeId = hit.id; SFX.bad(); return; }
+    if (S.sel < 0) { S.sel = hit.id; SFX.pick(); return; }
+    if (S.sel === hit.id) { S.sel = -1; SFX.pick(); return; }
+    var a = S.tiles[S.sel];
+    if (matchKey(a.kind) === matchKey(hit.kind)) removePair(a, hit);
+    else { S.sel = hit.id; SFX.pick(); }
+  }
+
+  /* =========================================================
+     布局 / 绘制
+     ========================================================= */
+  var LAY = { s: 1, ox: 0, oy: 0 }, W = 0, H = 0, DPR = 1;
+
+  function fitLayout() {
+    if (!S.tiles.length) return;
+    var minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9, i, t, px, py;
+    for (i = 0; i < S.tiles.length; i++) {
+      t = S.tiles[i];
+      px = t.x * TW + t.z * TW * SHX;
+      py = t.y * TH - t.z * TH * SHY;
+      if (px < minX) minX = px;
+      if (px + TW > maxX) maxX = px + TW;
+      if (py < minY) minY = py;
+      if (py + TH > maxY) maxY = py + TH;
+    }
+    var w = maxX - minX + DX, h = maxY - minY + DY;
+    var pad = 10;
+    LAY.s = Math.min((W - pad * 2) / w, (H - pad * 2) / h);
+    if (!(LAY.s > 0)) LAY.s = 1;
+    if (LAY.s > 1.25) LAY.s = 1.25;
+    LAY.ox = (W - w * LAY.s) / 2 - minX * LAY.s;
+    LAY.oy = (H - h * LAY.s) / 2 - minY * LAY.s;
+  }
+
+  function rr(g, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    g.beginPath();
+    g.moveTo(x + r, y);
+    g.lineTo(x + w - r, y); g.arcTo(x + w, y, x + w, y + r, r);
+    g.lineTo(x + w, y + h - r); g.arcTo(x + w, y + h, x + w - r, y + h, r);
+    g.lineTo(x + r, y + h); g.arcTo(x, y + h, x, y + h - r, r);
+    g.lineTo(x, y + r); g.arcTo(x, y, x + r, y, r);
+    g.closePath();
+  }
+
+  function drawFace(g, k, x, y, w, h, dim) {
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    if (k.blank) {
+      g.strokeStyle = dim ? 'rgba(74,71,65,.22)' : k.c;
+      g.lineWidth = 1.5;
+      rr(g, x + w * 0.22, y + h * 0.17, w * 0.56, h * 0.62, 3);
+      g.stroke();
+      g.beginPath();
+      return;
+    }
+    if (k.small) {
+      g.fillStyle = dim ? 'rgba(74,71,65,.32)' : k.c;
+      g.font = '600 ' + (TW * 0.50).toFixed(1) + 'px ' + FONT;
+      g.fillText(k.big, x + w / 2, y + h * 0.40);
+      g.fillStyle = dim ? 'rgba(74,71,65,.22)' : 'rgba(74,71,65,.44)';
+      g.font = '500 ' + (TW * 0.30).toFixed(1) + 'px ' + FONT;
+      g.fillText(k.small, x + w / 2, y + h * 0.75);
+    } else {
+      g.fillStyle = dim ? 'rgba(74,71,65,.32)' : k.c;
+      g.font = '600 ' + (TW * 0.60).toFixed(1) + 'px ' + FONT;
+      g.fillText(k.big, x + w / 2, y + h * 0.52);
+    }
+  }
+
+  function drawTile(g, t, tm) {
+    var px = t.x * TW + t.z * TW * SHX;
+    var py = t.y * TH - t.z * TH * SHY;
+    var w = TW - GAP, h = TH - GAP;
+    var free = isFree(t);
+    var k = KINDS[t.kind];
+    var lift = 0, hl = 0, hlc = C.good;
+
+    if (S.sel === t.id) { lift = -2.5; hl = 2.4; hlc = C.good; }
+    else if ((t.id === S.hintA || t.id === S.hintB) && tm - S.hintT < HINT_MS) {
+      lift = -1.5; hl = 2.2; hlc = C.gold;
+    }
+    if (S.shakeId === t.id && tm - S.shake < 320) {
+      px += Math.sin((tm - S.shake) / 320 * Math.PI * 6) * 1.8;
+    }
+    py += lift;
+
+    // 落影
+    g.fillStyle = 'rgba(74,71,65,.10)';
+    rr(g, px + 1.5, py + 2.5, w, h, 4.5); g.fill();
+    // 厚度
+    g.fillStyle = C.edge;
+    rr(g, px + DX, py + DY, w, h, 4.5); g.fill();
+    // 正面
+    g.fillStyle = free ? k.face : C.dim;
+    rr(g, px, py, w, h, 4.5); g.fill();
+    g.lineWidth = 1;
+    g.strokeStyle = 'rgba(74,71,65,.20)';
+    g.stroke();
+
+    drawFace(g, k, px, py, w, h, !free);
+
+    if (hl) {
+      g.lineWidth = hl;
+      g.strokeStyle = hlc;
+      rr(g, px + hl / 2, py + hl / 2, w - hl, h - hl, 4);
+      g.stroke();
+    }
+  }
+
+  function drawFx(g, tm) {
+    for (var i = 0; i < S.fx.length; i++) {
+      var f = S.fx[i];
+      var p = (tm - f.t0) / FX_MS;
+      if (p >= 1) continue;
+      var px = f.x * TW + f.z * TW * SHX;
+      var py = f.y * TH - f.z * TH * SHY - p * 14;
+      var w = TW - GAP, h = TH - GAP;
+      g.save();
+      g.globalAlpha = 1 - p;
+      g.translate(px + w / 2, py + h / 2);
+      g.scale(1 + p * 0.18, 1 + p * 0.18);
+      g.translate(-w / 2, -h / 2);
+      g.fillStyle = KINDS[f.kind].face;
+      rr(g, 0, 0, w, h, 4.5); g.fill();
+      g.strokeStyle = 'rgba(192,160,94,.9)';
+      g.lineWidth = 2;
+      rr(g, 1, 1, w - 2, h - 2, 4); g.stroke();
+      drawFace(g, KINDS[f.kind], 0, 0, w, h, false);
+      g.restore();
+      // 光环
+      g.save();
+      g.globalAlpha = (1 - p) * 0.5;
+      g.strokeStyle = C.gold;
+      g.lineWidth = 2;
+      g.beginPath();
+      g.arc(px + w / 2, py + h / 2, (w * 0.5) + p * 16, 0, Math.PI * 2);
+      g.stroke();
+      g.restore();
+    }
+  }
+
+  function draw() {
+    var g = ctx, tm = now();
+    g.clearRect(0, 0, W, H);
+    g.save();
+    g.translate(LAY.ox, LAY.oy);
+    g.scale(LAY.s, LAY.s);
+    for (var i = 0; i < S.order.length; i++) {
+      var t = S.tiles[S.order[i]];
+      if (t.alive) drawTile(g, t, tm);
+    }
+    drawFx(g, tm);
+    g.restore();
+  }
+
+  /* =========================================================
+     音效
+     ========================================================= */
+  var actx = null, noiseBuf = null, soundOn = true;
+  function ac() {
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); }
+      catch (e) { actx = null; }
+      if (actx) {
+        try {
+          var b = actx.createBufferSource(), buf = actx.createBuffer(1, 1, 22050);
+          b.buffer = buf; b.connect(actx.destination); b.start(0);
+        } catch (e2) {}
+      }
+    }
+    if (actx && actx.state === 'suspended') { try { actx.resume(); } catch (e3) {} }
+    return actx;
+  }
+  function beep(o) {
+    if (!soundOn) return;
+    var a = ac(); if (!a) return;
+    var dur = o.dur || 0.12, vol = o.vol || 0.14, t0 = a.currentTime + (o.delay || 0);
+    var osc = a.createOscillator(), gain = a.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(o.freq, t0);
+    if (o.to) osc.frequency.exponentialRampToValueAtTime(Math.max(40, o.to), t0 + dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain); gain.connect(a.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+  function noise(vol, f0, f1, dur) {
+    if (!soundOn) return;
+    var a = ac(); if (!a) return;
+    if (!noiseBuf) {
+      var n = Math.floor(a.sampleRate * 0.5);
+      noiseBuf = a.createBuffer(1, n, a.sampleRate);
+      var d = noiseBuf.getChannelData(0);
+      for (var i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 2);
+    }
+    var src = a.createBufferSource(); src.buffer = noiseBuf;
+    var bp = a.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 1.2;
+    var t0 = a.currentTime, gn = a.createGain();
+    bp.frequency.setValueAtTime(f0, t0);
+    bp.frequency.exponentialRampToValueAtTime(Math.max(60, f1), t0 + dur);
+    gn.gain.setValueAtTime(vol, t0);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    src.connect(bp); bp.connect(gn); gn.connect(a.destination);
+    src.start(t0); src.stop(t0 + dur + 0.02);
+  }
+  var SFX = {
+    pick: function () { beep({ freq: 620, dur: 0.06, vol: 0.09, type: 'triangle' }); },
+    match: function () {
+      beep({ freq: 660, dur: 0.09, vol: 0.12, type: 'triangle' });
+      beep({ freq: 990, dur: 0.13, vol: 0.10, type: 'triangle', delay: 0.07 });
+    },
+    bad: function () { beep({ freq: 170, to: 120, dur: 0.13, vol: 0.10, type: 'sawtooth' }); },
+    hint: function () { beep({ freq: 1040, dur: 0.1, vol: 0.08, type: 'sine' }); },
+    shuffle: function () { noise(0.16, 1400, 400, 0.34); },
+    undo: function () { beep({ freq: 520, to: 330, dur: 0.12, vol: 0.10, type: 'sine' }); },
+    dead: function () {
+      beep({ freq: 420, to: 260, dur: 0.2, vol: 0.11, type: 'sine' });
+      beep({ freq: 300, to: 180, dur: 0.28, vol: 0.10, type: 'sine', delay: 0.14 });
+    },
+    win: function () {
+      var f = [523, 659, 784, 1047];
+      for (var i = 0; i < f.length; i++) {
+        (function (i) {
+          setTimeout(function () { beep({ freq: f[i], dur: 0.24, vol: 0.12, type: 'triangle' }); }, i * 115);
+        })(i);
+      }
+    }
+  };
+
+  /* =========================================================
+     DOM
+     ========================================================= */
+  var canvas = document.getElementById('c');
+  var ctx = canvas.getContext('2d');
+  var wrap = document.getElementById('wrap');
+  var elRem = document.getElementById('rem');
+  var elTm = document.getElementById('tm');
+  var elSub = document.getElementById('sub');
+  var elMask = document.getElementById('mask');
+  var elWt = document.getElementById('wt');
+  var elWp = document.getElementById('wp');
+  var btnA = document.getElementById('wa');
+  var btnB = document.getElementById('wb');
+  var bHint = document.getElementById('bHint');
+  var bShuf = document.getElementById('bShuf');
+  var bUndo = document.getElementById('bUndo');
+  var bNew = document.getElementById('bNew');
+  var bSnd = document.getElementById('bSnd');
+  var nHint = document.getElementById('nHint');
+  var nShuf = document.getElementById('nShuf');
+  var nUndo = document.getElementById('nUndo');
+  var chips = document.getElementById('chips');
+
+  var actA = null, actB = null;
+
+  function showMask(t, p, aText, aFn, bText, bFn) {
+    elWt.textContent = t;
+    elWp.textContent = p;
+    btnA.textContent = aText; actA = aFn;
+    btnA.disabled = !aFn;
+    btnB.textContent = bText; actB = bFn;
+    btnB.disabled = !bFn;
+    elMask.classList.add('show');
+  }
+  function hideMask() { elMask.classList.remove('show'); }
+
+  function fmt(ms) {
+    var s = Math.floor(ms / 1000), m = Math.floor(s / 60);
+    return m + ':' + ('0' + (s % 60)).slice(-2);
+  }
+
+  function showWin() {
+    showMask('全部消除！',
+      '用时 ' + fmt(S.elapsed) + '\n' + LEVELS[S.lv].name + ' · ' + LAYOUTS[LEVELS[S.lv].layout].name + ' ' + S.tiles.length + ' 张',
+      '再来一局', function () { start(S.lv); },
+      S.lv === 0 ? '挑战困难' : '回到简单', function () { start(S.lv === 0 ? 1 : 0); syncChips(); });
+  }
+  function showDead() {
+    // 能翻的牌不到两张时，剩下的牌一定是一柱叠着的（每次只能拿最上面那张），
+    // 洗牌只换花色不换位置，救不回来 —— 这种情况必须引导玩家撤销而不是洗牌。
+    if (freeList().length < 2) {
+      showMask('牌堆被压死了',
+        '还剩 ' + aliveCount() + ' 张，但能翻开的不到两张\n洗牌只换花色救不了，得撤销回去换个顺序',
+        '撤销（剩 ' + S.undo + '）', function () {
+          if (S.undo <= 0 || !S.hist.length) { SFX.bad(); return; }
+          S.phase = 'play';
+          hideMask();
+          undoTurn();
+        },
+        '重开本局', function () { start(S.lv); });
+      return;
+    }
+    showMask('没有可消除的组合了',
+      '剩余 ' + aliveCount() + ' 张牌',
+      '洗牌（剩 ' + S.shuffle + '）', function () {
+        if (S.shuffle <= 0) { SFX.bad(); return; }
+        S.shuffle--;
+        if (shuffleBoard() && S.phase === 'dead') { S.phase = 'play'; hideMask(); }
+        sync();
+      },
+      '重开本局', function () { start(S.lv); });
+  }
+
+  function syncChips() {
+    var bs = chips.getElementsByTagName('button');
+    for (var i = 0; i < bs.length; i++) {
+      var on = parseInt(bs[i].getAttribute('data-l'), 10) === S.lv;
+      if (on) bs[i].className = 'on'; else bs[i].className = '';
+    }
+  }
+
+  function sync() {
+    elRem.textContent = aliveCount();
+    nHint.textContent = S.hint;
+    nShuf.textContent = S.shuffle;
+    nUndo.textContent = S.undo;
+    bHint.disabled = S.hint <= 0 || S.phase !== 'play';
+    bShuf.disabled = S.shuffle <= 0 || S.phase !== 'play';
+    bUndo.disabled = S.undo <= 0 || !S.hist.length || S.phase !== 'play';
+    elSub.textContent = LEVELS[S.lv].name + ' · ' + LAYOUTS[LEVELS[S.lv].layout].name + ' · 春夏秋冬/梅兰竹菊各自互配';
+    syncChips();
+  }
+
+  function resize() {
+    var r = wrap.getBoundingClientRect();
+    W = Math.max(1, r.width); H = Math.max(1, r.height);
+    DPR = Math.min(window.devicePixelRatio || 1, 3);
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    fitLayout();
+  }
+
+  /* ---------- 事件 ---------- */
+  function onDown(e) {
+    e.preventDefault();
+    ac();
+    var r = canvas.getBoundingClientRect();
+    var p = (e.touches && e.touches[0]) ? e.touches[0] : e;
+    tapAt(p.clientX - r.left, p.clientY - r.top);
+  }
+  if (window.PointerEvent) canvas.addEventListener('pointerdown', onDown);
+  else {
+    canvas.addEventListener('touchstart', onDown, { passive: false });
+    canvas.addEventListener('mousedown', onDown);
+  }
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(wrap);
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 250); });
+
+  chips.addEventListener('click', function (e) {
+    var b = e.target.closest ? e.target.closest('button') : null;
+    if (!b) return;
+    ac();
+    start(parseInt(b.getAttribute('data-l'), 10) || 0);
+  });
+  btnA.addEventListener('click', function () { ac(); if (actA) actA(); });
+  btnB.addEventListener('click', function () { ac(); if (actB) actB(); });
+  bHint.addEventListener('click', function () { ac(); useHint(); });
+  bShuf.addEventListener('click', function () {
+    ac();
+    if (S.shuffle <= 0 || S.phase !== 'play') return;
+    S.shuffle--;
+    if (S.phase === 'dead' && shuffleBoard()) { S.phase = 'play'; hideMask(); }
+    else shuffleBoard();
+    sync();
+  });
+  bUndo.addEventListener('click', function () { ac(); undoTurn(); });
+  bNew.addEventListener('click', function () { ac(); start(S.lv); });
+  bSnd.addEventListener('click', function () {
+    ac();
+    soundOn = !soundOn;
+    bSnd.textContent = soundOn ? '音效' : '静音';
+    if (soundOn) SFX.pick();
+  });
+
+  /* ---------- 主循环 ---------- */
+  var lastSec = -1;
+  function frame() {
+    var tm = now();
+    if (S.phase === 'play') {
+      var el = tm - S.t0;
+      var sec = Math.floor(el / 1000);
+      if (sec !== lastSec) { lastSec = sec; elTm.textContent = fmt(el); }
+    }
+    if (S.fx.length) {
+      for (var i = S.fx.length - 1; i >= 0; i--) {
+        if (tm - S.fx[i].t0 > FX_MS) S.fx.splice(i, 1);
+      }
+    }
+    if (S.hintT && tm - S.hintT > HINT_MS) { S.hintA = -1; S.hintB = -1; S.hintT = 0; }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  /* ---------- 启动 ---------- */
+  bSnd.textContent = '音效';
+  start(0);
+  resize();
+  requestAnimationFrame(frame);
+
+  /* ---------- 测试钩子 ---------- */
+  window.__mj = {
+    S: S, LEVELS: LEVELS, LAYOUTS: LAYOUTS, KINDS: KINDS,
+    start: start, matchKey: matchKey, isFree: isFree, freeList: freeList,
+    findPair: findPair, shuffleBoard: shuffleBoard, undoTurn: undoTurn,
+    useHint: useHint, removePair: removePair, tapAt: tapAt, draw: draw,
+    aliveCount: aliveCount, aliveTiles: aliveTiles,
+    buildTiles: buildTiles, genOrder: genOrder, buildPairs: buildPairs,
+    makeDeck: makeDeck, fitLayout: fitLayout, sync: sync, resize: resize,
+    get LAY() { return LAY; },
+    TW: TW, TH: TH, GAP: GAP, SHX: SHX, SHY: SHY,
+    SFX: SFX
+  };
+})();
+</script>
+</body>
+</html>
