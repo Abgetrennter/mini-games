@@ -1,0 +1,798 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="解绳结">
+<meta name="theme-color" content="#EDE9E3">
+<title>解绳结</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#EDE9E3}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    color:#4A4741;
+    -webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+  }
+  #app{
+    position:relative;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:radial-gradient(120% 80% at 50% 0%,#FAF7F2 0%,#E4DFD7 62%);
+  }
+  header{flex:0 0 auto;padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .title{font-size:17px;font-weight:600;letter-spacing:1px}
+  .title small{display:block;font-size:11px;font-weight:400;color:#9C948A;letter-spacing:0;margin-top:2px}
+  .right{display:flex;align-items:center;gap:12px}
+  .stats{display:flex;align-items:center;gap:14px}
+  .stat{text-align:right;line-height:1.1}
+  .stat b{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:10px;color:#9C948A;margin-top:1px}
+  .sndbtn{
+    width:34px;height:34px;flex:0 0 auto;border-radius:50%;font-size:15px;line-height:1;
+    font-family:inherit;color:#7B746B;background:rgba(255,255,255,.62);
+    border:1px solid rgba(74,71,65,.14);cursor:pointer;transition:.15s;
+  }
+  .sndbtn:active{background:rgba(74,71,65,.09)}
+  .chips{flex:0 0 auto;display:flex;gap:8px;padding:0 16px 8px}
+  .chips button{
+    flex:1;padding:7px 0;font-size:12px;font-family:inherit;color:#7B746B;
+    background:rgba(255,255,255,.62);border:1px solid rgba(74,71,65,.14);
+    border-radius:999px;cursor:pointer;transition:.18s;
+  }
+  .chips button.on{background:rgba(169,131,107,.22);border-color:rgba(150,120,98,.6);color:#4A413A}
+  #wrap{flex:1 1 auto;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  footer{flex:0 0 auto;display:flex;gap:8px;padding:10px 16px 16px}
+  footer button{
+    flex:1;padding:13px 0;font-size:13px;font-family:inherit;color:#57524B;
+    background:rgba(255,255,255,.66);border:1px solid rgba(74,71,65,.13);
+    border-radius:12px;cursor:pointer;transition:.15s;
+  }
+  footer button:active{background:rgba(74,71,65,.09)}
+  #rotate{
+    position:fixed;inset:0;z-index:50;display:none;
+    align-items:center;justify-content:center;flex-direction:column;gap:14px;
+    background:#EDE9E3;text-align:center;padding:24px;
+  }
+  #rotate .ic{width:54px;height:84px;border:2px solid #B4ACA2;border-radius:10px;position:relative}
+  #rotate .ic::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:12px;margin:-6px 0 0 -13px;border:2px solid #B4ACA2;border-radius:3px}
+  #rotate p{font-size:15px;color:#857E75}
+  #mask{
+    position:absolute;inset:0;z-index:20;display:none;
+    align-items:center;justify-content:center;background:rgba(237,233,227,.86);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  }
+  #mask.show{display:flex}
+  .card{text-align:center;padding:28px 30px;border-radius:20px;background:#FBF8F3;border:1px solid rgba(74,71,65,.12);min-width:238px}
+  .card h2{font-size:20px;font-weight:600;margin-bottom:6px}
+  .card p{font-size:13px;color:#8A837A;margin-bottom:20px}
+  .card .row{display:flex;gap:10px}
+  .card button{
+    flex:1;padding:11px 0;font-size:14px;font-family:inherit;border-radius:11px;cursor:pointer;border:none;
+    background:rgba(74,71,65,.07);color:#57524B;
+  }
+  .card button.pri{background:#A9836B;color:#fff}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="title">解绳结<small id="sub">第 1 关 · 3 根绳 · 交叉清零过关</small></div>
+    <div class="right">
+      <div class="stats">
+        <div class="stat"><b id="lv">1</b><span>关卡</span></div>
+        <div class="stat"><b id="xx">0</b><span>交叉</span></div>
+        <div class="stat"><b id="mv">0</b><span>步数</span></div>
+      </div>
+      <button class="sndbtn" id="snd" title="音效">♪</button>
+    </div>
+  </header>
+
+  <div class="chips" id="chips">
+    <button data-i="0">简单</button>
+    <button data-i="1">普通</button>
+    <button data-i="2">困难</button>
+    <button data-i="3">地狱</button>
+  </div>
+
+  <div id="wrap"><canvas id="cv"></canvas></div>
+
+  <footer>
+    <button id="hint">提示</button>
+    <button id="reset">重开</button>
+    <button id="skip">新关</button>
+  </footer>
+
+  <div id="mask">
+    <div class="card">
+      <h2 id="mt">第 1 关完成</h2>
+      <p id="mp"></p>
+      <div class="row">
+        <button id="again">再玩一次</button>
+        <button id="next" class="pri">下一关</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="rotate">
+  <div class="ic"></div>
+  <p>请把手机竖过来</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 常量 ---------- */
+  var PAL = ['#6C9A6B', '#6289BC', '#C68A5E', '#BC7186', '#C0A44E', '#57989E', '#937FB8'];
+  var LEVELS = [
+    { name: '简单', P: 8,  R: 3, free: 2, minCross: 2 },
+    { name: '普通', P: 10, R: 4, free: 2, minCross: 3 },
+    { name: '困难', P: 12, R: 5, free: 2, minCross: 4 },
+    { name: '地狱', P: 12, R: 6, free: 0, minCross: 6 }
+  ];
+  var KEY = 'ropeuntie.v1';
+
+  /* ---------- 纯几何 + 关卡生成（单位圆坐标，与画布尺寸无关） ----------
+     生成思路：先在孔位上做一份「无交叉正解」（凸点递归配对），
+     再把所有绳端随机打乱成缠绕的谜面；玩家把绳头拖回任意不交叉
+     的摆法即过关。正解内嵌，打乱只是同一批孔位上的换位，
+     通过「拖到空孔 / 压上互换」必然能还原，每一局保证可解。 */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(a, rnd) {
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = (rnd() * (i + 1)) | 0;
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+  // 二次贝塞尔采样：弦越长越向板心坠（板心 = (cx2,cy2)）
+  function ropePts(ax, ay, bx, by, cx2, cy2) {
+    var mx = (ax + bx) / 2, my = (ay + by) / 2;
+    var len = Math.hypot(bx - ax, by - ay);
+    var k = 0.36 * Math.min(1, len / 2);
+    var qx = mx + (cx2 - mx) * k, qy = my + (cy2 - my) * k;
+    var pts = [], n = 20, i;
+    for (i = 0; i <= n; i++) {
+      var t = i / n, u = 1 - t;
+      pts.push([u * u * ax + 2 * u * t * qx + t * t * bx, u * u * ay + 2 * u * t * qy + t * t * by]);
+    }
+    return pts;
+  }
+  function segCross(p, q, r, s) {
+    var d1x = q[0] - p[0], d1y = q[1] - p[1], d2x = s[0] - r[0], d2y = s[1] - r[1];
+    var den = d1x * d2y - d1y * d2x;
+    if (Math.abs(den) < 1e-9) return false;
+    var ex = r[0] - p[0], ey = r[1] - p[1];
+    var t = (ex * d2y - ey * d2x) / den;
+    var u = (ex * d1y - ey * d1x) / den;
+    return t > 0.002 && t < 0.998 && u > 0.002 && u < 0.998;
+  }
+  function crossBetween(pa, pb) {
+    for (var i = 0; i < pa.length - 1; i++)
+      for (var j = 0; j < pb.length - 1; j++)
+        if (segCross(pa[i], pa[i + 1], pb[j], pb[j + 1])) return true;
+    return false;
+  }
+  function totalCross(list) {
+    var n = 0, i, j;
+    for (i = 0; i < list.length; i++)
+      for (j = i + 1; j < list.length; j++)
+        if (crossBetween(list[i], list[j])) n++;
+    return n;
+  }
+  function tryGen(L, rnd) {
+    var np = L.P, nr = L.R, i, j;
+    var idx = [];
+    for (i = 0; i < np; i++) idx.push(i);
+    shuffle(idx, rnd);
+    var occ = idx.slice(0, 2 * nr).sort(function (a, b) { return a - b; });
+    // 正解：占用孔位按环序做无交叉配对
+    var pairs = [];
+    (function rec(arr) {
+      if (arr.length === 0) return;
+      var k = 1 + 2 * ((rnd() * (arr.length / 2)) | 0);
+      pairs.push([arr[0], arr[k]]);
+      rec(arr.slice(1, k));
+      rec(arr.slice(k + 1));
+    })(occ);
+    // 孔位角度（单位圆）
+    var a0 = rnd() * (Math.PI * 2 / np);
+    var pos = [];
+    for (i = 0; i < np; i++) {
+      var an = a0 + i * Math.PI * 2 / np;
+      pos.push([Math.cos(an), Math.sin(an)]);
+    }
+    // 正解自身必须零交叉（与判定用同一套曲线几何）
+    var homeSets = [];
+    for (i = 0; i < nr; i++)
+      homeSets.push(ropePts(pos[pairs[i][0]][0], pos[pairs[i][0]][1], pos[pairs[i][1]][0], pos[pairs[i][1]][1], 0, 0));
+    if (totalCross(homeSets) !== 0) return null;
+    // 打乱成谜面
+    var order = [];
+    for (i = 0; i < nr; i++) order.push(i);
+    shuffle(order, rnd);
+    var ropesDef = [];
+    for (i = 0; i < nr; i++) ropesDef.push({ home: pairs[order[i]] });
+    var items = [];
+    for (i = 0; i < nr; i++) { items.push([i, 0]); items.push([i, 1]); }
+    var pegEnd = null, cross = 0;
+    for (var t = 0; t < 40; t++) {
+      shuffle(items, rnd);
+      pegEnd = [];
+      for (i = 0; i < np; i++) pegEnd.push(null);
+      for (j = 0; j < items.length; j++) pegEnd[occ[j]] = items[j];
+      var sets = [];
+      for (i = 0; i < nr; i++) {
+        var pa = -1, pb = -1;
+        for (j = 0; j < np; j++) {
+          if (pegEnd[j] && pegEnd[j][0] === i) { if (pa < 0) pa = j; else pb = j; }
+        }
+        sets.push(ropePts(pos[pa][0], pos[pa][1], pos[pb][0], pos[pb][1], 0, 0));
+      }
+      cross = totalCross(sets);
+      if (cross >= 1) break;
+    }
+    if (cross < 1) return null;
+    return { np: np, nr: nr, pos: pos, pegEnd: pegEnd, ropes: ropesDef, cross: cross };
+  }
+  function genLevel(df, lv) {
+    var L = LEVELS[df];
+    var rnd = mulberry32(((df + 1) * 7717 + lv * 104729 + 4093) | 0);
+    var fallback = null;
+    for (var attempt = 0; attempt < 80; attempt++) {
+      var g = tryGen(L, rnd);
+      if (g && g.cross >= L.minCross) return g;
+      if (g && !fallback) fallback = g;
+    }
+    return fallback; // 至少 cross>=1，阈值兜底
+  }
+
+  /* ---------- dom ---------- */
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var wrap = document.getElementById('wrap');
+  var elLv = document.getElementById('lv');
+  var elXx = document.getElementById('xx');
+  var elMv = document.getElementById('mv');
+  var elSub = document.getElementById('sub');
+  var elMask = document.getElementById('mask');
+  var elMt = document.getElementById('mt');
+  var elMp = document.getElementById('mp');
+  var elRotate = document.getElementById('rotate');
+  var elChips = document.getElementById('chips');
+  var btnSnd = document.getElementById('snd');
+
+  /* ---------- 状态 ---------- */
+  var W = 0, H = 0, DPR = 1;
+  var P = 0, R = 0;
+  var pegs = [];   // {ux,uy 单位坐标, x,y 屏幕坐标, rope,end 占用}
+  var ropes = [];  // {peg:[a,b], home:[a,b], color, pts}
+  var cx = 0, cy = 0, BR = 0, IR = 0, pr = 60, hr = 10;
+  var moves = 0, crossings = 0, won = false, hintsUsed = 0;
+  var lvArr = [1, 1, 1, 1], diff = 0, soundOn = true;
+  var drag = null; // {ri,ei,from,x,y}
+  var rings = [], confetti = [], maskTimer = 0;
+
+  /* ---------- 几何同步 ---------- */
+  function layoutPegs() {
+    for (var i = 0; i < P; i++) {
+      pegs[i].x = cx + pegs[i].ux * pr;
+      pegs[i].y = cy + pegs[i].uy * pr;
+    }
+  }
+  function updatePts() {
+    for (var ri = 0; ri < R; ri++) {
+      var r = ropes[ri], a = r.peg[0], b = r.peg[1], ax, ay, bx, by;
+      if (drag && drag.ri === ri && drag.ei === 0) { ax = drag.x; ay = drag.y; }
+      else { ax = pegs[a].x; ay = pegs[a].y; }
+      if (drag && drag.ri === ri && drag.ei === 1) { bx = drag.x; by = drag.y; }
+      else { bx = pegs[b].x; by = pegs[b].y; }
+      r.pts = ropePts(ax, ay, bx, by, cx, cy);
+    }
+  }
+  function refreshCross() {
+    var sets = [], i;
+    for (i = 0; i < R; i++) sets.push(ropes[i].pts);
+    crossings = totalCross(sets);
+  }
+
+  /* ---------- 拖动规则 ---------- */
+  function distToSeg(px, py, a, b) {
+    var dx = b[0] - a[0], dy = b[1] - a[1];
+    var l2 = dx * dx + dy * dy;
+    var t = l2 ? ((px - a[0]) * dx + (py - a[1]) * dy) / l2 : 0;
+    t = t < 0 ? 0 : (t > 1 ? 1 : t);
+    return Math.hypot(px - a[0] - t * dx, py - a[1] - t * dy);
+  }
+  function grabAt(px, py) {
+    var best = -1, bd = Math.max(16, pr * 0.18);
+    for (var ri = 0; ri < R; ri++) {
+      var pts = ropes[ri].pts;
+      for (var i = 0; i < pts.length - 1; i++) {
+        var d = distToSeg(px, py, pts[i], pts[i + 1]);
+        if (d < bd) { bd = d; best = ri; }
+      }
+    }
+    if (best < 0 || won) return;
+    var r = ropes[best];
+    var da = Math.hypot(px - pegs[r.peg[0]].x, py - pegs[r.peg[0]].y);
+    var db = Math.hypot(px - pegs[r.peg[1]].x, py - pegs[r.peg[1]].y);
+    var ei = da <= db ? 0 : 1;
+    drag = { ri: best, ei: ei, from: r.peg[ei], x: px, y: py };
+    pegs[r.peg[ei]].rope = -1;
+    pegs[r.peg[ei]].end = -1;
+    r.peg[ei] = -1;
+    SFX.grab();
+    updatePts();
+  }
+  function moveDrag(px, py) {
+    if (!drag) return;
+    drag.x = px; drag.y = py;
+    updatePts();
+  }
+  function releaseDrag() {
+    if (!drag) return;
+    var d = drag;
+    drag = null;
+    var ri = d.ri, ei = d.ei, from = d.from, i, target = -1, bd = pr * 0.34;
+    for (i = 0; i < P; i++) {
+      var dd = Math.hypot(d.x - pegs[i].x, d.y - pegs[i].y);
+      if (dd < bd) { bd = dd; target = i; }
+    }
+    if (target >= 0 && target !== from && target !== ropes[ri].peg[1 - ei]) {
+      var tr = pegs[target].rope;
+      if (tr < 0) {                      // 空孔：移过去
+        pegs[target].rope = ri; pegs[target].end = ei;
+        ropes[ri].peg[ei] = target;
+        SFX.pin();
+      } else {                           // 有绳头：互换
+        var te = pegs[target].end;
+        pegs[from].rope = tr; pegs[from].end = te;
+        ropes[tr].peg[te] = from;
+        pegs[target].rope = ri; pegs[target].end = ei;
+        ropes[ri].peg[ei] = target;
+        SFX.swap();
+      }
+      moves++;
+    } else {                             // 没落回孔位：原样插回
+      pegs[from].rope = ri; pegs[from].end = ei;
+      ropes[ri].peg[ei] = from;
+      SFX.back();
+    }
+    updatePts();
+    refreshCross();
+    hud();
+    checkWin();
+  }
+
+  /* ---------- 提示 / 胜负 ---------- */
+  function hint() {
+    if (won) return;
+    for (var ri = 0; ri < R; ri++) {
+      for (var ei = 0; ei < 2; ei++) {
+        var cur = ropes[ri].peg[ei], home = ropes[ri].home[ei];
+        if (cur === home) continue;
+        var occ = pegs[home].rope;
+        if (occ < 0) {
+          pegs[cur].rope = -1;
+          pegs[home].rope = ri; pegs[home].end = ei;
+          ropes[ri].peg[ei] = home;
+        } else if (occ !== ri) {
+          var oe = pegs[home].end;
+          pegs[cur].rope = occ; pegs[cur].end = oe;
+          ropes[occ].peg[oe] = cur;
+          pegs[home].rope = ri; pegs[home].end = ei;
+          ropes[ri].peg[ei] = home;
+        } else {
+          continue; // 正位被自己另一端占着，换下一个绳头
+        }
+        hintsUsed++;
+        SFX.hint();
+        updatePts();
+        refreshCross();
+        hud();
+        checkWin();
+        return;
+      }
+    }
+  }
+  function checkWin() {
+    if (won || crossings > 0) return;
+    won = true;
+    save();
+    SFX.win();
+    spawnConfetti();
+    maskTimer = setTimeout(function () {
+      elMt.textContent = '第 ' + lvArr[diff] + ' 关完成';
+      elMp.textContent = '共 ' + R + ' 根绳 · 用了 ' + moves + ' 步' + (hintsUsed ? '' : ' · 无提示通关');
+      elMask.classList.add('show');
+    }, 900);
+  }
+
+  /* ---------- 关卡流转 ---------- */
+  function newGame() {
+    var g = genLevel(diff, lvArr[diff]), i;
+    P = g.np; R = g.nr;
+    pegs = []; ropes = [];
+    for (i = 0; i < P; i++)
+      pegs.push({ ux: g.pos[i][0], uy: g.pos[i][1], x: 0, y: 0, rope: -1, end: -1 });
+    for (i = 0; i < R; i++)
+      ropes.push({ peg: [-1, -1], home: g.ropes[i].home.slice(), color: PAL[i], pts: [] });
+    for (i = 0; i < P; i++) {
+      var e = g.pegEnd[i];
+      if (e) {
+        pegs[i].rope = e[0]; pegs[i].end = e[1];
+        ropes[e[0]].peg[e[1]] = i;
+      }
+    }
+    moves = 0; hintsUsed = 0; won = false; drag = null;
+    rings = []; confetti = [];
+    clearTimeout(maskTimer);
+    elMask.classList.remove('show');
+    resize();
+    hud();
+  }
+  function resetBoard() {
+    if (drag) releaseDrag();
+    for (var i = 0; i < P; i++) { pegs[i].rope = -1; pegs[i].end = -1; }
+    for (var ri = 0; ri < R; ri++) ropes[ri].peg = [-1, -1];
+    // 回到谜面初始摆法：按生成结果重放
+    var g = genLevel(diff, lvArr[diff]);
+    for (i = 0; i < P; i++) {
+      var e = g.pegEnd[i];
+      if (e) {
+        pegs[i].rope = e[0]; pegs[i].end = e[1];
+        ropes[e[0]].peg[e[1]] = i;
+      }
+    }
+    moves = 0; hintsUsed = 0; won = false; drag = null;
+    rings = []; confetti = [];
+    clearTimeout(maskTimer);
+    elMask.classList.remove('show');
+    updatePts();
+    refreshCross();
+    hud();
+  }
+
+  /* ---------- 存档 ---------- */
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ v: 1, df: diff, lv: lvArr, s: soundOn ? 1 : 0 }));
+    } catch (e) {}
+  }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if (!s || s.v !== 1) return;
+      var i;
+      if (typeof s.df === 'number' && s.df >= 0 && s.df < LEVELS.length) diff = s.df | 0;
+      if (Array.isArray(s.lv) && s.lv.length === LEVELS.length) {
+        for (i = 0; i < s.lv.length; i++)
+          if (typeof s.lv[i] === 'number' && s.lv[i] >= 1) lvArr[i] = Math.min(9999, s.lv[i] | 0);
+      }
+      soundOn = s.s !== 0;
+    } catch (e) {}
+  }
+
+  /* ---------- 音效 ---------- */
+  var actx = null;
+  function ac() {
+    try {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        actx = new AC();
+      }
+      if (actx.state === 'suspended') actx.resume();
+      return actx;
+    } catch (e) { return null; }
+  }
+  function tone(freq, dur, type, vol, at) {
+    if (!soundOn) return;
+    var a = ac(); if (!a) return;
+    try {
+      var t0 = a.currentTime + (at || 0);
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  }
+  var SFX = {
+    grab: function () { tone(360, 0.05, 'triangle', 0.06); },
+    pin: function () { tone(230, 0.1, 'sine', 0.12); },
+    swap: function () { tone(330, 0.06, 'triangle', 0.09); tone(440, 0.06, 'triangle', 0.09, 0.05); },
+    back: function () { tone(200, 0.05, 'triangle', 0.04); },
+    hint: function () { tone(780, 0.12, 'sine', 0.08); },
+    win: function () {
+      var seq = [523, 659, 784, 1047], i;
+      for (i = 0; i < seq.length; i++) tone(seq[i], 0.22, 'sine', 0.11, i * 0.1);
+    }
+  };
+
+  /* ---------- 渲染 ---------- */
+  function resize() {
+    DPR = Math.min(3, window.devicePixelRatio || 1);
+    W = wrap.clientWidth || window.innerWidth;
+    H = wrap.clientHeight || Math.round(window.innerHeight * 0.6);
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    var m = Math.min(W, H);
+    BR = (m - 26) / 2;
+    IR = BR * 0.76;
+    pr = (BR + IR) / 2;
+    hr = Math.max(8, Math.min(15, (BR - IR) * 0.3));
+    cx = W / 2;
+    cy = H / 2;
+    var TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    elRotate.style.display = (TOUCH && window.innerWidth > window.innerHeight) ? 'flex' : 'none';
+    if (P > 0) {
+      layoutPegs();
+      updatePts();
+      refreshCross();
+    }
+  }
+  function drawBall(x, y, color, r, t) {
+    var g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.15, x, y, r);
+    g.addColorStop(0, shade(color, 0.42));
+    g.addColorStop(1, shade(color, -0.18));
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = Math.max(1.2, r * 0.16);
+    ctx.strokeStyle = shade(color, -0.4); ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x - r * 0.32, y - r * 0.36, r * 0.26, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fill();
+  }
+  function drawRope(ri) {
+    var pts = ropes[ri].pts, i;
+    if (pts.length < 2) return;
+    var w = Math.max(7, BR * 0.075);
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], pts[0][1]);
+    for (i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.strokeStyle = 'rgba(60,50,40,.16)';
+    ctx.lineWidth = w + 3;
+    ctx.stroke();
+    ctx.strokeStyle = ropes[ri].color;
+    ctx.lineWidth = w;
+    ctx.globalAlpha = (drag && drag.ri === ri) ? 0.9 : 1;
+    ctx.stroke();
+    // 扭纹
+    ctx.setLineDash([w * 0.8, w * 1.5]);
+    ctx.strokeStyle = shade(ropes[ri].color, 0.3);
+    ctx.lineWidth = w * 0.45;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
+  function spawnConfetti() {
+    var i, cols = PAL.concat(['#B4ACA2', '#C8B89A']);
+    for (i = 0; i < 44; i++) {
+      confetti.push({
+        x: cx, y: cy,
+        vx: (Math.random() * 2 - 1) * 170,
+        vy: -70 - Math.random() * 190,
+        rot: Math.random() * 6.28, vr: (Math.random() * 2 - 1) * 9,
+        size: 3 + Math.random() * 3.4,
+        life: 1.3 + Math.random() * 0.7,
+        c: cols[(Math.random() * cols.length) | 0]
+      });
+    }
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    if (P === 0) return;
+    // 板环
+    ctx.save();
+    ctx.shadowColor = 'rgba(74,71,65,.14)'; ctx.shadowBlur = 20; ctx.shadowOffsetY = 5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, BR, 0, Math.PI * 2);
+    ctx.arc(cx, cy, IR, 0, Math.PI * 2, true);
+    ctx.fillStyle = '#96826F';
+    ctx.fill();
+    ctx.restore();
+    ctx.beginPath();
+    ctx.arc(cx, cy, BR, 0, Math.PI * 2);
+    ctx.strokeStyle = '#7B6957'; ctx.lineWidth = 3; ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, IR, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = 2; ctx.stroke();
+    // 缝线
+    ctx.beginPath();
+    ctx.arc(cx, cy, (BR + IR) / 2, 0, Math.PI * 2);
+    ctx.setLineDash([7, 8]);
+    ctx.strokeStyle = 'rgba(243,238,228,.4)'; ctx.lineWidth = 1.6;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // 孔
+    var i, hover = -1;
+    if (drag) {
+      var bd = pr * 0.34;
+      for (i = 0; i < P; i++) {
+        var dd = Math.hypot(drag.x - pegs[i].x, drag.y - pegs[i].y);
+        if (dd < bd) { bd = dd; hover = i; }
+      }
+      if (hover >= 0 && (hover === drag.from || hover === ropes[drag.ri].peg[1 - drag.ei])) hover = -1;
+    }
+    for (i = 0; i < P; i++) {
+      ctx.beginPath();
+      ctx.arc(pegs[i].x, pegs[i].y, hr, 0, Math.PI * 2);
+      ctx.fillStyle = '#6B5B4D';
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.lineWidth = 1.5; ctx.stroke();
+      if (i === hover) {
+        ctx.beginPath();
+        ctx.arc(pegs[i].x, pegs[i].y, hr + 5, 0, Math.PI * 2);
+        ctx.strokeStyle = PAL[drag.ri]; ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
+    }
+    // 绳
+    for (i = 0; i < R; i++) drawRope(i);
+    // 绳结球（压住绳头）
+    for (i = 0; i < P; i++) {
+      if (pegs[i].rope >= 0) drawBall(pegs[i].x, pegs[i].y, PAL[pegs[i].rope], hr * 1.12, t);
+    }
+    // 手里的绳头
+    if (drag) drawBall(drag.x, drag.y, PAL[drag.ri], hr * 1.12, t);
+    // 接通波纹（过关装饰）
+    var age;
+    for (i = rings.length - 1; i >= 0; i--) {
+      age = (t * 1000 - rings[i].t0) / 450;
+      if (age >= 1) { rings.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(rings[i].x, rings[i].y, hr * (1 + age * 4), 0, Math.PI * 2);
+      ctx.strokeStyle = rings[i].c;
+      ctx.globalAlpha = 0.5 * (1 - age);
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // 彩纸
+    for (i = confetti.length - 1; i >= 0; i--) {
+      var f = confetti[i];
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(f.rot);
+      ctx.globalAlpha = clamp(f.life, 0, 1);
+      ctx.fillStyle = f.c;
+      ctx.fillRect(-f.size / 2, -f.size / 2, f.size, f.size * 0.62);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function step(dt) {
+    var i;
+    for (i = confetti.length - 1; i >= 0; i--) {
+      var f = confetti[i];
+      f.vy += 460 * dt;
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      f.rot += f.vr * dt;
+      f.life -= dt;
+      if (f.life <= 0) confetti.splice(i, 1);
+    }
+  }
+
+  /* ---------- HUD ---------- */
+  function hud() {
+    elLv.textContent = lvArr[diff];
+    elXx.textContent = crossings;
+    elMv.textContent = moves;
+    elSub.textContent = '第 ' + lvArr[diff] + ' 关 · ' + R + ' 根绳 · 交叉清零过关';
+    var btns = elChips.getElementsByTagName('button'), i;
+    for (i = 0; i < btns.length; i++) btns[i].className = (i === diff) ? 'on' : '';
+  }
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function hex2rgb(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+  function shade(h, t) {
+    var c = hex2rgb(h), r, g, b;
+    if (t > 0) { r = c[0] * (1 - t); g = c[1] * (1 - t); b = c[2] * (1 - t); }
+    else { r = c[0] + (255 - c[0]) * -t; g = c[1] + (255 - c[1]) * -t; b = c[2] + (255 - c[2]) * -t; }
+    return 'rgb(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ')';
+  }
+
+  /* ---------- 输入 ---------- */
+  function evtPos(e) {
+    var rect = cv.getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top];
+  }
+  cv.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    ac();
+    var p = evtPos(e);
+    grabAt(p[0], p[1]);
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  }, { passive: false });
+  cv.addEventListener('pointermove', function (e) {
+    if (!drag) return;
+    e.preventDefault();
+    var p = evtPos(e);
+    moveDrag(p[0], p[1]);
+  }, { passive: false });
+  window.addEventListener('pointerup', function () { if (drag) releaseDrag(); });
+  window.addEventListener('pointercancel', function () { if (drag) releaseDrag(); });
+  cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  elChips.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || t.tagName !== 'BUTTON') return;
+    var i = +t.getAttribute('data-i');
+    if (i === diff) return;
+    ac();
+    diff = i;
+    save();
+    newGame();
+  });
+  document.getElementById('hint').addEventListener('click', function () { ac(); hint(); });
+  document.getElementById('reset').addEventListener('click', function () { ac(); resetBoard(); });
+  document.getElementById('skip').addEventListener('click', function () {
+    ac();
+    lvArr[diff] = Math.min(9999, lvArr[diff] + 1);
+    save();
+    newGame();
+  });
+  document.getElementById('again').addEventListener('click', function () { ac(); resetBoard(); });
+  document.getElementById('next').addEventListener('click', function () {
+    ac();
+    lvArr[diff] = Math.min(9999, lvArr[diff] + 1);
+    save();
+    newGame();
+  });
+  btnSnd.addEventListener('click', function () {
+    soundOn = !soundOn;
+    btnSnd.style.opacity = soundOn ? 1 : 0.38;
+    ac();
+    save();
+  });
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 220); });
+
+  /* ---------- 启动 ---------- */
+  load();
+  btnSnd.style.opacity = soundOn ? 1 : 0.38;
+  newGame();
+  resize();
+
+  var lastT = 0;
+  function frame(ts) {
+    var t = ts / 1000, dt = lastT ? Math.min(0.05, t - lastT) : 0.016;
+    lastT = t;
+    step(dt);
+    draw(t);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
