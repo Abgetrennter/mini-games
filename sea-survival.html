@@ -1,0 +1,1225 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="海上求生">
+<meta name="theme-color" content="#EDE9E3">
+<title>海上求生</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#EDE9E3}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    color:#4A4741;
+    -webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+  }
+  #app{
+    position:relative;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:radial-gradient(120% 80% at 50% 0%,#FAF7F2 0%,#E4DFD7 62%);
+  }
+  header{
+    flex:0 0 auto;
+    padding:14px 16px 8px;
+    display:flex;align-items:center;justify-content:space-between;gap:12px;
+  }
+  .title{font-size:17px;font-weight:600;letter-spacing:1px}
+  .title small{display:block;font-size:11px;font-weight:400;color:#9C948A;letter-spacing:0;margin-top:2px}
+  .stats{display:flex;align-items:center;gap:14px}
+  .stat{text-align:right;line-height:1.1}
+  .stat b{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:10px;color:#9C948A;margin-top:1px}
+  .chips{flex:0 0 auto;display:flex;gap:8px;padding:2px 16px 8px}
+  .chips button{
+    flex:1;padding:8px 0;font-size:12px;font-family:inherit;color:#7B746B;
+    background:rgba(255,255,255,.62);border:1px solid rgba(74,71,65,.14);
+    border-radius:999px;cursor:pointer;transition:.18s;
+  }
+  .chips button.on{background:rgba(122,141,124,.26);border-color:rgba(110,130,113,.6);color:#3F4A41}
+  #wrap{flex:1 1 auto;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  footer{flex:0 0 auto;display:flex;gap:7px;padding:10px 14px 16px}
+  footer button{
+    flex:1;padding:13px 0;font-size:13px;font-family:inherit;color:#57524B;
+    background:rgba(255,255,255,.66);border:1px solid rgba(74,71,65,.13);
+    border-radius:12px;cursor:pointer;transition:.15s;
+  }
+  footer button:active{background:rgba(74,71,65,.09)}
+  footer button:disabled{opacity:.35;cursor:default}
+  #mask{
+    position:absolute;inset:0;z-index:20;display:none;
+    align-items:center;justify-content:center;background:rgba(237,233,227,.86);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+    padding:20px;
+  }
+  #mask.show{display:flex}
+  .card{text-align:center;padding:26px 28px;border-radius:20px;background:#FBF8F3;border:1px solid rgba(74,71,65,.12);min-width:260px;max-width:340px;width:100%}
+  .card h2{font-size:20px;font-weight:600;margin-bottom:6px}
+  .card p{font-size:13px;color:#8A837A;margin-bottom:16px;white-space:pre-line;line-height:1.7;text-align:left}
+  .card .row{display:flex;gap:10px}
+  .card button{
+    flex:1;padding:11px 0;font-size:14px;font-family:inherit;border-radius:11px;cursor:pointer;border:none;
+    background:rgba(74,71,65,.07);color:#57524B;
+  }
+  .card button.pri{background:#7A8D7C;color:#fff}
+  .card button:disabled{opacity:.35;cursor:default}
+  .up-list{text-align:left;margin-bottom:14px;max-height:min(48vh,360px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .up-row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid rgba(74,71,65,.08);
+  }
+  .up-row:last-child{border-bottom:none}
+  .up-info{flex:1;min-width:0}
+  .up-info b{display:block;font-size:13px;font-weight:600}
+  .up-info span{display:block;font-size:11px;color:#9C948A;margin-top:2px;line-height:1.45}
+  .up-info em{font-style:normal;color:#7A8D7C;font-weight:600}
+  .up-row button{
+    flex:none;padding:7px 12px;font-size:12px;font-family:inherit;border-radius:9px;cursor:pointer;
+    border:1px solid rgba(74,71,65,.14);background:rgba(255,255,255,.7);color:#57524B;
+  }
+  .up-row button.ok{background:#7A8D7C;border-color:#7A8D7C;color:#fff}
+  .up-row button:disabled{opacity:.35;cursor:default}
+  .up-sec{font-size:12px;font-weight:600;color:#6B655C;letter-spacing:.4px;margin:2px 0 4px;text-align:left}
+  .drop-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid rgba(74,71,65,.08)}
+  .drop-row:last-child{border-bottom:none}
+  .drop-name{flex:1;min-width:0;font-size:13px;display:flex;align-items:center;gap:8px}
+  .drop-dot{width:10px;height:10px;border-radius:50%;flex:none}
+  .drop-row button{
+    flex:none;padding:6px 10px;font-size:11.5px;font-family:inherit;border-radius:8px;cursor:pointer;
+    border:1px solid rgba(74,71,65,.14);background:rgba(255,255,255,.7);color:#57524B;
+  }
+  .drop-row button:disabled{opacity:.35;cursor:default}
+  .drop-empty{font-size:12px;color:#9C948A;text-align:left;padding:6px 0 2px}
+  #toast{
+    position:absolute;left:50%;top:12%;transform:translateX(-50%);
+    z-index:15;pointer-events:none;
+    font-size:12.5px;color:#4A4741;background:rgba(251,248,243,.92);
+    border:1px solid rgba(74,71,65,.12);border-radius:999px;
+    padding:7px 14px;white-space:nowrap;
+    opacity:0;transition:opacity .25s;
+    max-width:92%;overflow:hidden;text-overflow:ellipsis;
+  }
+  #toast.show{opacity:1}
+  #inv{
+    position:absolute;left:10px;bottom:10px;z-index:10;
+    display:flex;gap:6px;flex-wrap:wrap;
+    max-width:calc(100% - 20px);
+  }
+  .pill{
+    font-size:10.5px;line-height:1;padding:5px 8px;border-radius:999px;
+    background:rgba(251,248,243,.82);color:#6B655C;border:1px solid rgba(74,71,65,.1);
+    font-variant-numeric:tabular-nums;
+    cursor:pointer;
+  }
+  #rotate{
+    position:fixed;inset:0;z-index:50;display:none;
+    align-items:center;justify-content:center;flex-direction:column;gap:14px;
+    background:#EDE9E3;text-align:center;padding:24px;
+  }
+  #rotate .ic{width:54px;height:84px;border:2px solid #B4ACA2;border-radius:10px;position:relative}
+  #rotate .ic::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:12px;margin:-6px 0 0 -13px;border:2px solid #B4ACA2;border-radius:3px}
+  #rotate p{font-size:15px;color:#857E75}
+  @media (orientation:landscape) and (max-height:480px){
+    #rotate{display:flex}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="title">海上求生<small>收集漂浮物 · 升级船只 · 看天吃饭</small></div>
+    <div class="stats">
+      <div class="stat"><b id="sDist">0</b><span>海里</span></div>
+      <div class="stat"><b id="sWx">晴</b><span>天气</span></div>
+    </div>
+  </header>
+
+  <div class="chips" id="modes">
+    <button data-lv="0" class="on">简单</button>
+    <button data-lv="1">困难</button>
+  </div>
+
+  <div id="wrap">
+    <canvas id="cv"></canvas>
+    <div id="inv"></div>
+    <div id="toast"></div>
+  </div>
+
+  <footer>
+    <button id="bUp">升级</button>
+    <button id="bNew">重新开始</button>
+    <button id="bSound">音效 开</button>
+  </footer>
+
+  <div id="mask" class="show">
+    <div class="card">
+      <h2 id="mTitle">海上求生</h2>
+      <p id="mText">拖动海面驾驶小船，接住漂来的木板、塑料、食物与淡水。
+雨天可集雨，风暴会啃船体——及时加固。
+点「升级」可丢弃仓库物品；朝一个方向坚持航行，会遇见补给与惊喜。</p>
+      <div class="row"><button class="pri" id="mGo">起航</button></div>
+    </div>
+  </div>
+
+  <div id="upmask" style="position:absolute;inset:0;z-index:25;display:none;align-items:center;justify-content:center;background:rgba(237,233,227,.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);padding:20px">
+    <div class="card">
+      <h2>船只升级</h2>
+      <div class="up-sec">仓库 <span id="holdLabel"></span></div>
+      <div id="dropList"></div>
+      <div class="up-sec" style="margin-top:10px">升级</div>
+      <div class="up-list" id="upList"></div>
+      <div class="row"><button id="upClose">返回</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="rotate"><div class="ic"></div><p>请竖屏游玩</p></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 常量 ---------- */
+  var LW = 400, LH = 680;
+  var C = {
+    sea0: '#8FA3B0', sea1: '#7A93A4', seaDeep: '#6D8798',
+    foam: 'rgba(250,248,243,.35)',
+    ink: '#4A4741', sub: '#9C948A',
+    boat: '#C4A574', boatDark: '#A88858', sail: '#F0EBE3',
+    good: '#7A8D7C', bad: '#C07870',
+    wood: '#A89070', plastic: '#8A9AAA', food: '#9AAF8A',
+    water: '#7CA3B8', rope: '#B8A078',
+    storm: '#5A6A78', fog: '#C5C8C8'
+  };
+
+  var RES = {
+    wood:    { name: '木板', color: C.wood,    r: 9,  w: 22 },
+    plastic: { name: '塑料', color: C.plastic, r: 7,  w: 18 },
+    food:    { name: '食物', color: C.food,    r: 8,  w: 16 },
+    water:   { name: '淡水', color: C.water,   r: 8,  w: 16 },
+    rope:    { name: '绳索', color: C.rope,    r: 6,  w: 12 }
+  };
+
+  var WX = {
+    clear: { name: '晴', color: '#E8E4DC', dim: 0,    spd: 1,    dmg: 0,  spawn: 1,    rain: 0 },
+    cloud: { name: '云', color: '#D4D2CE', dim: 0.04, spd: 0.95, dmg: 0,  spawn: 0.9,  rain: 0 },
+    rain:  { name: '雨', color: '#B8BEC4', dim: 0.12, spd: 0.9,  dmg: 0,  spawn: 0.75, rain: 1 },
+    fog:   { name: '雾', color: '#C8C6C2', dim: 0.28, spd: 0.85, dmg: 0,  spawn: 0.7,  rain: 0 },
+    storm: { name: '风暴', color: '#6A7280', dim: 0.22, spd: 1.25, dmg: 1, spawn: 0.55, rain: 0.4 }
+  };
+  var WX_SEQ = ['clear', 'cloud', 'rain', 'fog', 'clear', 'storm', 'cloud', 'clear'];
+
+  var UPG = [
+    { id: 'hull',  name: '加固船体', max: 5, base: { wood: 6,  rope: 2 },  desc: function (lv) { return '船体上限 +' + (lv * 1) + ' · 减伤'; } },
+    { id: 'sail',  name: '升级船帆', max: 5, base: { wood: 5,  plastic: 4 }, desc: function (lv) { return '航速 +' + (lv * 12) + '%'; } },
+    { id: 'net',   name: '捕鱼网',   max: 3, base: { rope: 4,  plastic: 5 }, desc: function (lv) { return lv === 0 ? '自动网住附近食物' : '范围与速率提升'; } },
+    { id: 'rain',  name: '集雨器',   max: 3, base: { plastic: 6, rope: 2 }, desc: function (lv) { return lv === 0 ? '下雨时收集淡水' : '容量与速率提升'; } },
+    { id: 'hold',  name: '加长货舱', max: 4, base: { wood: 8,  plastic: 3 }, desc: function (lv) { return '库存上限 +' + (lv * 8); } },
+    { id: 'repair', name: '紧急修理', max: 99, base: { wood: 4 }, desc: function () { return '立即恢复船体'; } }
+  ];
+
+  var LEVELS = [
+    { name: '简单', hp: 8,  hDec: 0.55, tDec: 0.7,  wMul: 1,    resMul: 1,    stormDmg: 0.55 },
+    { name: '困难', hp: 6,  hDec: 0.75, tDec: 0.95, wMul: 1.25, resMul: 0.75, stormDmg: 0.85 }
+  ];
+
+  /* ---------- 状态 ---------- */
+  var S = {
+    lv: 0, phase: 'idle',
+    t: 0, dist: 0, best: 0,
+    bx: LW / 2, by: LH * 0.62, bAng: -Math.PI / 2, bSpd: 0,
+    tx: null, ty: null, dragging: false,
+    hp: 8, hunger: 100, thirst: 100, hull: 8, hullMax: 8,
+    inv: { wood: 0, plastic: 0, food: 0, water: 0, rope: 0 },
+    up: { hull: 0, sail: 0, net: 0, rain: 0, hold: 0 },
+    res: [], drops: [], fx: [],
+    wx: 'clear', wxT: 6, wxI: 0,
+    day: 0, sailDir: null, sailT: 0,
+    netAcc: 0, rainAcc: 0, eatAcc: 0, drinkAcc: 0,
+    shake: 0, wave: 0, paused: false,
+    discIdx: 0, msgs: [], soundOn: true
+  };
+  var L = LEVELS[0];
+  var DISC = [
+    { d: 500,  t: '远远望见一座礁石，上面似乎有补给…', give: { food: 2, water: 2 } },
+    { d: 1200, t: '漂流瓶：里面藏着一卷绳索。', give: { rope: 3 } },
+    { d: 2200, t: '一群海鸥盘旋——附近有鱼群！', give: { food: 4 } },
+    { d: 3500, t: '半截沉船残骸，撬到了一些木板。', give: { wood: 6, plastic: 3 } },
+    { d: 5000, t: '一座小岛的轮廓！你靠岸搜刮了一番。', give: { wood: 5, food: 3, water: 3, rope: 2 } },
+    { d: 7000, t: '补给箱！军用口粮与净水。', give: { food: 5, water: 5 } },
+    { d: 10000, t: '远方灯塔在闪烁——有人类文明！', give: { wood: 8, plastic: 6, rope: 4 } }
+  ];
+
+  /* ---------- 画布 ---------- */
+  var cv = document.getElementById('cv'), g = cv.getContext('2d');
+  var wrap = document.getElementById('wrap');
+  var sc = 1, ox = 0, oy = 0;
+  var dpr = 1;
+
+  function resize() {
+    var cw = wrap.clientWidth, ch = wrap.clientHeight;
+    if (!cw || !ch) return;
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
+    cv.style.width = cw + 'px'; cv.style.height = ch + 'px';
+    sc = Math.min(cw / LW, ch / LH);
+    ox = (cw - LW * sc) / 2; oy = (ch - LH * sc) / 2;
+    g.setTransform(dpr * sc, 0, 0, dpr * sc, dpr * ox, dpr * oy);
+  }
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 250); });
+
+  /* ---------- 音效 ---------- */
+  var actx = null;
+  function ac() {
+    if (!actx) {
+      try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { actx = null; }
+    }
+    if (actx && actx.state === 'suspended') { try { actx.resume(); } catch (e) {} }
+    return actx;
+  }
+  function beep(o) {
+    if (!S.soundOn) return;
+    var a = ac(); if (!a) return;
+    var dur = o.dur || 0.12, vol = o.vol || 0.14, t0 = a.currentTime;
+    var osc = a.createOscillator(), gain = a.createGain();
+    osc.type = o.type || 'sine';
+    osc.frequency.setValueAtTime(o.freq, t0);
+    if (o.to) osc.frequency.exponentialRampToValueAtTime(Math.max(40, o.to), t0 + dur);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(vol, t0 + 0.012);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain); gain.connect(a.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.03);
+  }
+  var SFX = {
+    pick: function () { beep({ freq: 700, dur: 0.06, vol: 0.1, type: 'triangle' }); },
+    bad: function () { beep({ freq: 140, to: 90, dur: 0.16, vol: 0.12, type: 'sawtooth' }); },
+    up: function () { beep({ freq: 520, dur: 0.1, vol: 0.11, type: 'triangle' }); beep({ freq: 780, to: 900, dur: 0.14, vol: 0.09, type: 'sine' }); },
+    disc: function () { beep({ freq: 440, dur: 0.12, vol: 0.1, type: 'triangle' }); beep({ freq: 660, dur: 0.16, vol: 0.1, type: 'triangle' }); },
+    win: function () {
+      var f = [523, 659, 784, 1047];
+      for (var i = 0; i < f.length; i++) {
+        (function (i) { setTimeout(function () { beep({ freq: f[i], dur: 0.22, vol: 0.12, type: 'triangle' }); }, i * 110); })(i);
+      }
+    },
+    lose: function () { beep({ freq: 220, to: 110, dur: 0.5, vol: 0.14, type: 'sawtooth' }); }
+  };
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function lerp(a, b, t) { return a + (b - a) * t; }
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function ri(a, b) { return (a + Math.random() * (b - a + 1)) | 0; }
+  function dist2(x1, y1, x2, y2) { var dx = x2 - x1, dy = y2 - y1; return dx * dx + dy * dy; }
+  function holdMax() { return 20 + S.up.hold * 8; }
+  function invTotal() {
+    return S.inv.wood + S.inv.plastic + S.inv.food + S.inv.water + S.inv.rope;
+  }
+  function baseCost(id) {
+    var u = null;
+    for (var i = 0; i < UPG.length; i++) if (UPG[i].id === id) u = UPG[i];
+    if (!u) return {};
+    var mul = 1 + (S.up[id] || 0) * 0.55;
+    if (id === 'repair') mul = 1;
+    var out = {};
+    for (var k in u.base) out[k] = Math.ceil(u.base[k] * mul);
+    return out;
+  }
+  function canPay(cost) {
+    for (var k in cost) if ((S.inv[k] | 0) < cost[k]) return false;
+    return true;
+  }
+  function pay(cost) {
+    for (var k in cost) S.inv[k] -= cost[k];
+  }
+  function costText(cost) {
+    var parts = [];
+    for (var k in cost) parts.push(RES[k].name + '×' + cost[k]);
+    return parts.join(' ');
+  }
+
+  /* ---------- 提示 ---------- */
+  var toastEl = document.getElementById('toast');
+  var toastT = 0;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    toastT = 2.2;
+  }
+
+  /* ---------- 存档 ---------- */
+  var KEY = 'sea-survival-best';
+  try { S.best = parseInt(localStorage.getItem(KEY) || '0', 10) || 0; } catch (e) { S.best = 0; }
+  function saveBest() {
+    if (S.dist > S.best) {
+      S.best = S.dist | 0;
+      try { localStorage.setItem(KEY, String(S.best)); } catch (e) {}
+    }
+  }
+
+  /* ---------- 物品栏 UI ---------- */
+  var invEl = document.getElementById('inv');
+  invEl.addEventListener('click', function () {
+    if (S.phase !== 'play' || S.paused) return;
+    ac();
+    S.paused = true;
+    renderUp();
+    upmask.style.display = 'flex';
+  });
+  invEl.style.cursor = 'pointer';
+  function syncInv() {
+    invEl.innerHTML =
+      '<span class="pill">木板 ' + S.inv.wood + '</span>' +
+      '<span class="pill">塑料 ' + S.inv.plastic + '</span>' +
+      '<span class="pill">食物 ' + S.inv.food + '</span>' +
+      '<span class="pill">淡水 ' + S.inv.water + '</span>' +
+      '<span class="pill">绳索 ' + S.inv.rope + '</span>' +
+      '<span class="pill">船体 ' + (S.hull | 0) + '/' + S.hullMax + '</span>';
+  }
+
+  /* ---------- 天气 ---------- */
+  function pickWx() {
+    var pool = [];
+    for (var i = 0; i < WX_SEQ.length; i++) {
+      if (WX_SEQ[i] === S.wx) continue;
+      var w = WX_SEQ[i];
+      if (w === 'storm' && S.lv === 0 && S.day < 1) continue;
+      pool.push(w);
+    }
+    if (!pool.length) pool = ['clear'];
+    // 权重：晴天稍多
+    var w2 = [];
+    for (var j = 0; j < pool.length; j++) {
+      var n = pool[j] === 'clear' ? 3 : pool[j] === 'storm' ? 1 : 2;
+      for (var k = 0; k < n; k++) w2.push(pool[j]);
+    }
+    return w2[(Math.random() * w2.length) | 0];
+  }
+  function setWx(id) {
+    S.wx = id;
+    S.wxT = id === 'storm' ? rnd(8, 14) : rnd(10, 18);
+    if (id === 'storm') toast('风暴来袭！抓紧船体！');
+    else if (id === 'rain') toast('下雨了——集雨器开始工作');
+    else if (id === 'fog') toast('起雾了，视线受阻');
+  }
+
+  /* ---------- 资源 ---------- */
+  function spawnRes(forceType) {
+    if (S.res.length > 28) return;
+    var types = ['wood', 'plastic', 'food', 'water', 'rope'];
+    var weights = [30, 22, 18, 18, 12];
+    var type = forceType;
+    if (!type) {
+      var sum = 0, i;
+      for (i = 0; i < weights.length; i++) sum += weights[i];
+      var r = Math.random() * sum, acc = 0;
+      for (i = 0; i < types.length; i++) {
+        acc += weights[i];
+        if (r <= acc) { type = types[i]; break; }
+      }
+      if (!type) type = 'wood';
+    }
+    var edge = ri(0, 3);
+    var x, y, ang;
+    if (edge === 0) { x = rnd(-20, LW + 20); y = -30; ang = rnd(0.4, Math.PI - 0.4); }
+    else if (edge === 1) { x = LW + 30; y = rnd(-20, LH + 20); ang = rnd(Math.PI * 0.6, Math.PI * 1.4); }
+    else if (edge === 2) { x = rnd(-20, LW + 20); y = LH + 30; ang = rnd(Math.PI + 0.4, Math.PI * 2 - 0.4); }
+    else { x = -30; y = rnd(-20, LH + 20); ang = rnd(-Math.PI * 0.4, Math.PI * 0.4); }
+    // 稍微朝中心漂
+    var toC = Math.atan2(LH * 0.55 - y, LW * 0.5 - x);
+    ang = ang * 0.35 + toC * 0.65;
+    var spd = rnd(12, 28) * L.wMul;
+    S.res.push({
+      type: type, x: x, y: y,
+      vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+      rot: rnd(0, Math.PI * 2), rv: rnd(-0.8, 0.8),
+      bob: rnd(0, Math.PI * 2), r: RES[type].r
+    });
+  }
+
+  function pickRes(item) {
+    var cap = holdMax();
+    var type = item.type;
+    if (invTotal() >= cap) {
+      if (S.t - (S._fullT || -9) > 1.6) {
+        toast('货舱满了——点「升级」可丢弃物品');
+        SFX.bad();
+        S._fullT = S.t;
+      }
+      return false;
+    }
+    S.inv[type] = (S.inv[type] | 0) + 1;
+    SFX.pick();
+    for (var i = 0; i < 5; i++) {
+      S.fx.push({
+        x: item.x, y: item.y,
+        vx: rnd(-30, 30), vy: rnd(-40, 10),
+        life: rnd(0.3, 0.55), max: 0.55,
+        c: RES[type].color, s: rnd(1.5, 3)
+      });
+    }
+    return true;
+  }
+
+  /* ---------- 升级 / 仓库 ---------- */
+  var upmask = document.getElementById('upmask');
+  var upList = document.getElementById('upList');
+  var dropList = document.getElementById('dropList');
+  var holdLabel = document.getElementById('holdLabel');
+  var RES_ORDER = ['wood', 'plastic', 'food', 'water', 'rope'];
+
+  function renderDrop() {
+    var total = invTotal(), cap = holdMax();
+    holdLabel.textContent = total + ' / ' + cap + (total >= cap ? '（已满）' : '');
+    var html = '';
+    var any = false;
+    for (var i = 0; i < RES_ORDER.length; i++) {
+      var id = RES_ORDER[i];
+      var n = S.inv[id] | 0;
+      if (n <= 0) continue;
+      any = true;
+      html +=
+        '<div class="drop-row">' +
+        '<div class="drop-name"><span class="drop-dot" style="background:' + RES[id].color + '"></span>' +
+        RES[id].name + ' ×' + n + '</div>' +
+        '<button data-drop="' + id + '" data-n="1">丢 1</button>' +
+        '<button data-drop="' + id + '" data-n="all">丢全部</button></div>';
+    }
+    if (!any) html = '<div class="drop-empty">仓库是空的。点下面的按钮可以升级船只。</div>';
+    dropList.innerHTML = html;
+  }
+
+  function dropInv(id, n) {
+    var have = S.inv[id] | 0;
+    if (have <= 0) return;
+    var take = n === 'all' ? have : Math.min(have, n | 0);
+    if (take <= 0) return;
+    S.inv[id] = have - take;
+    // 海上抛弃：附近多飘一点同类资源，避免白丢
+    for (var i = 0; i < Math.min(take, 3); i++) {
+      var ang = rnd(0, Math.PI * 2);
+      var dd = rnd(28, 48);
+      S.res.push({
+        type: id,
+        x: clamp(S.bx + Math.cos(ang) * dd, 12, LW - 12),
+        y: clamp(S.by + Math.sin(ang) * dd, 12, LH - 12),
+        vx: Math.cos(ang) * rnd(18, 36),
+        vy: Math.sin(ang) * rnd(18, 36),
+        rot: rnd(0, Math.PI * 2), rv: rnd(-0.8, 0.8),
+        bob: rnd(0, Math.PI * 2), r: RES[id].r
+      });
+    }
+    toast('丢弃 ' + RES[id].name + ' ×' + take);
+    SFX.bad();
+    renderDrop();
+    syncInv();
+  }
+
+  function renderUp() {
+    renderDrop();
+    var html = '';
+    for (var i = 0; i < UPG.length; i++) {
+      var u = UPG[i];
+      var lv = S.up[u.id] | 0;
+      var isRepair = u.id === 'repair';
+      var cost = baseCost(u.id);
+      var maxed = !isRepair && lv >= u.max;
+      var ok = !maxed && canPay(cost) && (!isRepair || S.hull < S.hullMax);
+      var sub = isRepair
+        ? (S.hull >= S.hullMax ? '船体已满' : '船体 ' + (S.hull | 0) + '/' + S.hullMax)
+        : 'Lv.' + lv + ' / ' + u.max + ' · ' + u.desc(lv);
+      html +=
+        '<div class="up-row">' +
+        '<div class="up-info"><b>' + u.name + '</b><span>' + sub + '</span>' +
+        '<span>需要 ' + (maxed ? '已满级' : costText(cost)) + '</span></div>' +
+        '<button data-id="' + u.id + '" class="' + (ok ? 'ok' : '') + '"' + (ok ? '' : ' disabled') + '>' +
+        (maxed ? '满' : '升级') + '</button></div>';
+    }
+    upList.innerHTML = html;
+  }
+  dropList.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button[data-drop]') : null;
+    if (!btn || btn.disabled) return;
+    ac();
+    dropInv(btn.getAttribute('data-drop'), btn.getAttribute('data-n'));
+  });
+  upList.addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button') : null;
+    if (!btn || btn.disabled) return;
+    var id = btn.getAttribute('data-id');
+    if (!id) return;
+    ac();
+    var cost = baseCost(id);
+    if (!canPay(cost)) return;
+    pay(cost);
+    if (id === 'repair') {
+      S.hull = Math.min(S.hullMax, S.hull + 3);
+      toast('船体修复 +3');
+    } else {
+      S.up[id] = (S.up[id] | 0) + 1;
+      if (id === 'hull') {
+        S.hullMax = 8 + S.up.hull;
+        S.hull = Math.min(S.hullMax, S.hull + 1);
+      }
+      toast(UPG_NAME(id) + ' 升级成功');
+    }
+    SFX.up();
+    renderUp();
+    syncInv();
+    syncStats();
+  });
+  function UPG_NAME(id) {
+    for (var i = 0; i < UPG.length; i++) if (UPG[i].id === id) return UPG[i].name;
+    return id;
+  }
+  document.getElementById('bUp').addEventListener('click', function () {
+    if (S.phase !== 'play') return;
+    ac();
+    S.paused = true;
+    renderUp();
+    upmask.style.display = 'flex';
+  });
+  document.getElementById('upClose').addEventListener('click', function () {
+    upmask.style.display = 'none';
+    S.paused = false;
+  });
+
+  /* ---------- 输入 ---------- */
+  function pt(ev) {
+    var rect = cv.getBoundingClientRect();
+    var cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - rect.left;
+    var cy = (ev.touches ? ev.touches[0].clientY : ev.clientY) - rect.top;
+    return { x: (cx - ox) / sc, y: (cy - oy) / sc };
+  }
+  function onDown(ev) {
+    if (S.phase !== 'play' || S.paused) return;
+    ac();
+    var p = pt(ev);
+    S.dragging = true;
+    S.tx = p.x; S.ty = p.y;
+    if (ev.cancelable) ev.preventDefault();
+  }
+  function onMove(ev) {
+    if (!S.dragging) return;
+    var p = pt(ev);
+    S.tx = p.x; S.ty = p.y;
+    if (ev.cancelable) ev.preventDefault();
+  }
+  function onUp() { S.dragging = false; }
+  cv.addEventListener('touchstart', onDown, { passive: false });
+  cv.addEventListener('touchmove', onMove, { passive: false });
+  cv.addEventListener('touchend', onUp);
+  cv.addEventListener('touchcancel', onUp);
+  cv.addEventListener('mousedown', onDown);
+  cv.addEventListener('mousemove', onMove);
+  window.addEventListener('mouseup', onUp);
+
+  var keys = {};
+  window.addEventListener('keydown', function (e) {
+    keys[e.key] = true;
+    if (e.key === 'Escape' && upmask.style.display === 'flex') {
+      upmask.style.display = 'none'; S.paused = false;
+    }
+  });
+  window.addEventListener('keyup', function (e) { keys[e.key] = false; });
+
+  /* ---------- 流程 ---------- */
+  var mask = document.getElementById('mask');
+  var mTitle = document.getElementById('mTitle');
+  var mText = document.getElementById('mText');
+  var mGo = document.getElementById('mGo');
+
+  function showMask(title, text, btn) {
+    mTitle.textContent = title;
+    mText.textContent = text;
+    mGo.textContent = btn || '确定';
+    mask.classList.add('show');
+  }
+  function hideMask() { mask.classList.remove('show'); }
+
+  function newGame() {
+    L = LEVELS[S.lv];
+    S.phase = 'play';
+    S.t = 0; S.dist = 0;
+    S.bx = LW / 2; S.by = LH * 0.62; S.bAng = -Math.PI / 2; S.bSpd = 0;
+    S.tx = null; S.ty = null; S.dragging = false;
+    S.hp = L.hp; S.hunger = 100; S.thirst = 100;
+    S.hullMax = 8; S.hull = 8;
+    S.inv = { wood: 0, plastic: 0, food: 0, water: 0, rope: 0 };
+    S.up = { hull: 0, sail: 0, net: 0, rain: 0, hold: 0 };
+    S.res = []; S.fx = [];
+    S.wx = 'clear'; S.wxT = rnd(5, 9); S.wxI = 0;
+    S.day = 0; S.sailDir = null; S.sailT = 0;
+    S.netAcc = 0; S.rainAcc = 0; S.eatAcc = 0; S.drinkAcc = 0;
+    S.shake = 0; S.wave = 0; S.paused = false;
+    S.discIdx = 0;
+    upmask.style.display = 'none';
+    hideMask();
+    for (var i = 0; i < 5; i++) spawnRes();
+    syncInv(); syncStats();
+    toast('起航！拖动海面驾驶');
+  }
+
+  mGo.addEventListener('click', function () {
+    ac();
+    if (S.phase === 'win' || S.phase === 'lose') newGame();
+    else if (S.phase === 'idle') newGame();
+    else hideMask();
+  });
+
+  document.getElementById('bNew').addEventListener('click', function () {
+    ac();
+    if (S.phase === 'play' && S.dist > 50) {
+      if (!confirm('放弃当前航程，重新开始？')) return;
+    }
+    newGame();
+  });
+  var bSound = document.getElementById('bSound');
+  bSound.addEventListener('click', function () {
+    S.soundOn = !S.soundOn;
+    bSound.textContent = '音效 ' + (S.soundOn ? '开' : '关');
+    if (S.soundOn) { ac(); SFX.pick(); }
+  });
+
+  document.getElementById('modes').addEventListener('click', function (e) {
+    var btn = e.target.closest ? e.target.closest('button') : null;
+    if (!btn) return;
+    var lv = btn.getAttribute('data-lv') | 0;
+    if (lv === S.lv && S.phase === 'play') return;
+    S.lv = lv;
+    var bs = this.querySelectorAll('button');
+    for (var i = 0; i < bs.length; i++) bs[i].classList.toggle('on', (bs[i].getAttribute('data-lv') | 0) === lv);
+    newGame();
+  });
+
+  /* ---------- 统计栏 ---------- */
+  var sDist = document.getElementById('sDist');
+  var sWx = document.getElementById('sWx');
+  function syncStats() {
+    sDist.textContent = (S.dist / 100) | 0;
+    sWx.textContent = WX[S.wx].name;
+  }
+
+  /* ---------- 更新 ---------- */
+  function update(dt) {
+    S.t += dt;
+    S.wave += dt;
+
+    // 天气
+    S.wxT -= dt;
+    if (S.wxT <= 0) setWx(pickWx());
+    var wx = WX[S.wx];
+
+    // 驾驶
+    var baseSpd = 90 * (1 + S.up.sail * 0.12) * wx.spd;
+    var wantX = null, wantY = null;
+    if (S.dragging && S.tx != null) { wantX = S.tx; wantY = S.ty; }
+    else {
+      var kx = 0, ky = 0;
+      if (keys.ArrowLeft || keys.a || keys.A) kx -= 1;
+      if (keys.ArrowRight || keys.d || keys.D) kx += 1;
+      if (keys.ArrowUp || keys.w || keys.W) ky -= 1;
+      if (keys.ArrowDown || keys.s || keys.S) ky += 1;
+      if (kx || ky) {
+        var kl = Math.sqrt(kx * kx + ky * ky);
+        wantX = S.bx + (kx / kl) * 80;
+        wantY = S.by + (ky / kl) * 80;
+      }
+    }
+
+    if (wantX != null) {
+      var dx = wantX - S.bx, dy = wantY - S.by;
+      var d = Math.sqrt(dx * dx + dy * dy);
+      if (d > 6) {
+        var targetAng = Math.atan2(dy, dx);
+        // 角度插值
+        var da = targetAng - S.bAng;
+        while (da > Math.PI) da -= Math.PI * 2;
+        while (da < -Math.PI) da += Math.PI * 2;
+        S.bAng += da * Math.min(1, dt * 5);
+        S.bSpd = lerp(S.bSpd, baseSpd, Math.min(1, dt * 3));
+      } else {
+        S.bSpd = lerp(S.bSpd, 0, Math.min(1, dt * 4));
+      }
+    } else {
+      S.bSpd = lerp(S.bSpd, baseSpd * 0.15, Math.min(1, dt * 2));
+    }
+
+    // 风暴额外推挤
+    if (S.wx === 'storm') {
+      S.bAng += Math.sin(S.t * 2.2) * dt * 0.5;
+      S.shake = Math.max(S.shake, 0.4);
+    }
+
+    var mvx = Math.cos(S.bAng) * S.bSpd * dt;
+    var mvy = Math.sin(S.bAng) * S.bSpd * dt;
+    S.bx = clamp(S.bx + mvx, 18, LW - 18);
+    S.by = clamp(S.by + mvy, 18, LH - 18);
+
+    // 航向一致性 → 里程
+    var moving = S.bSpd > 20;
+    if (moving) {
+      var key = Math.round(S.bAng / (Math.PI / 4));
+      if (S.sailDir === key) S.sailT += dt;
+      else { S.sailDir = key; S.sailT = dt * 0.3; }
+      var eff = S.bSpd * dt * (0.55 + Math.min(0.45, S.sailT * 0.04));
+      S.dist += eff;
+      if ((S.dist | 0) % 500 < 20) S.day = (S.dist / 1000) | 0;
+    }
+
+    // 生存消耗
+    S.hunger = clamp(S.hunger - L.hDec * dt, 0, 100);
+    S.thirst = clamp(S.thirst - L.tDec * dt, 0, 100);
+    if (S.hunger <= 0 || S.thirst <= 0) {
+      S.hull = Math.max(0, S.hull - dt * 0.6);
+      if (S.t % 1 < dt) toast(S.hunger <= 0 ? '饥饿正在消耗船体耐久' : '口渴正在消耗船体耐久');
+    }
+
+    // 风暴伤害
+    if (S.wx === 'storm') {
+      var dmg = L.stormDmg * dt * (1 - S.up.hull * 0.08);
+      S.hull -= dmg;
+      if (Math.random() < dt * 2) S.shake = Math.max(S.shake, 0.6);
+    }
+
+    // 资源漂来
+    var spawnRate = 0.55 * wx.spawn * L.resMul;
+    if (Math.random() < spawnRate * dt) spawnRes();
+
+    // 资源移动与拾取
+    var pickR = 22 + (S.bSpd > 40 ? 4 : 0);
+    for (var i = S.res.length - 1; i >= 0; i--) {
+      var r = S.res[i];
+      r.x += r.vx * dt; r.y += r.vy * dt;
+      r.rot += r.rv * dt;
+      r.bob += dt * 2.5;
+      if (r.x < -60 || r.x > LW + 60 || r.y < -60 || r.y > LH + 60) {
+        S.res.splice(i, 1);
+        continue;
+      }
+      if (dist2(r.x, r.y, S.bx, S.by) < (pickR + r.r) * (pickR + r.r)) {
+        if (pickRes(r)) S.res.splice(i, 1);
+      }
+    }
+
+    // 捕鱼网
+    if (S.up.net > 0) {
+      S.netAcc += dt * S.up.net * 0.55;
+      var netR = 40 + S.up.net * 18;
+      while (S.netAcc >= 1) {
+        S.netAcc -= 1;
+        var best = -1, bd = netR * netR;
+        for (var n = 0; n < S.res.length; n++) {
+          if (S.res[n].type !== 'food') continue;
+          var dd = dist2(S.res[n].x, S.res[n].y, S.bx, S.by);
+          if (dd < bd) { bd = dd; best = n; }
+        }
+        if (best >= 0 && pickRes(S.res[best])) {
+          S.res.splice(best, 1);
+        }
+      }
+    }
+
+    // 集雨
+    if (S.up.rain > 0 && wx.rain > 0) {
+      S.rainAcc += dt * S.up.rain * 0.4 * wx.rain;
+      while (S.rainAcc >= 1) {
+        S.rainAcc -= 1;
+        if (invTotal() < holdMax()) {
+          S.inv.water += 1;
+          SFX.pick();
+        }
+      }
+    }
+
+    // 饥饿口渴自动消耗（有库存时缓慢补充）
+    S.eatAcc += dt;
+    S.drinkAcc += dt;
+    if (S.eatAcc > 4 && S.hunger < 55 && S.inv.food > 0) {
+      S.eatAcc = 0; S.inv.food -= 1; S.hunger = clamp(S.hunger + 28, 0, 100);
+      toast('吃掉了食物 · 饱食 +' + 28);
+      SFX.pick();
+    }
+    if (S.drinkAcc > 4 && S.thirst < 55 && S.inv.water > 0) {
+      S.drinkAcc = 0; S.inv.water -= 1; S.thirst = clamp(S.thirst + 30, 0, 100);
+      toast('喝掉了淡水 · 口渴 +' + 30);
+      SFX.pick();
+    }
+
+    // 发现
+    while (S.discIdx < DISC.length && S.dist >= DISC[S.discIdx].d) {
+      var disc = DISC[S.discIdx];
+      S.discIdx++;
+      for (var k in disc.give) {
+        var space = holdMax() - invTotal();
+        var add = Math.min(space, disc.give[k]);
+        if (add > 0) S.inv[k] += add;
+      }
+      toast(disc.t);
+      SFX.disc();
+    }
+
+    // 粒子
+    for (var f = S.fx.length - 1; f >= 0; f--) {
+      var p = S.fx[f];
+      p.life -= dt;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      p.vy += 60 * dt;
+      if (p.life <= 0) S.fx.splice(f, 1);
+    }
+
+    S.shake = Math.max(0, S.shake - dt * 1.8);
+
+    // toast
+    if (toastT > 0) {
+      toastT -= dt;
+      if (toastT <= 0) toastEl.classList.remove('show');
+    }
+
+    // 胜负
+    if (S.hull <= 0) {
+      S.hull = 0;
+      S.phase = 'lose';
+      saveBest();
+      SFX.lose();
+      showMask('船沉了…', '你坚持了 ' + ((S.dist / 100) | 0) + ' 海里。\n最佳纪录 ' + ((S.best / 100) | 0) + ' 海里。\n也许下次多备些木板。', '再来一次');
+    } else if (S.dist >= 10000) {
+      S.phase = 'win';
+      saveBest();
+      SFX.win();
+      showMask('获救！', '你航行了整整 100 海里，等到了救援。\n最佳纪录 ' + ((S.best / 100) | 0) + ' 海里。', '再出海');
+    }
+
+    syncStats();
+    syncInv();
+  }
+
+  /* ---------- 绘制 ---------- */
+  function rr(g2, x, y, w, h, r) {
+    r = Math.min(r, w / 2, h / 2);
+    g2.beginPath();
+    g2.moveTo(x + r, y);
+    g2.arcTo(x + w, y, x + w, y + h, r);
+    g2.arcTo(x + w, y + h, x, y + h, r);
+    g2.arcTo(x, y + h, x, y, r);
+    g2.arcTo(x, y, x + w, y, r);
+    g2.closePath();
+  }
+
+  function drawSea() {
+    var wx = WX[S.wx];
+    // 基础渐变
+    var grd = g.createLinearGradient(0, 0, 0, LH);
+    if (S.wx === 'storm') {
+      grd.addColorStop(0, '#5A6470');
+      grd.addColorStop(1, '#4A5560');
+    } else if (S.wx === 'fog') {
+      grd.addColorStop(0, '#A8B0B4');
+      grd.addColorStop(1, '#8E989C');
+    } else if (S.wx === 'rain') {
+      grd.addColorStop(0, '#7A8A96');
+      grd.addColorStop(1, '#6A7A86');
+    } else if (S.wx === 'cloud') {
+      grd.addColorStop(0, '#8A9AAA');
+      grd.addColorStop(1, '#7A8A9A');
+    } else {
+      grd.addColorStop(0, '#8FA8B8');
+      grd.addColorStop(1, '#6D8798');
+    }
+    g.fillStyle = grd;
+    g.fillRect(0, 0, LW, LH);
+
+    // 波浪线
+    g.save();
+    g.strokeStyle = wx.dim > 0.2 ? 'rgba(255,255,255,.08)' : 'rgba(255,255,255,.14)';
+    g.lineWidth = 1;
+    var scroll = S.dist * 0.35 + S.wave * 8;
+    for (var row = -1; row < 12; row++) {
+      var y0 = ((row * 58 + scroll) % (LH + 80)) - 40;
+      g.beginPath();
+      for (var x = 0; x <= LW; x += 16) {
+        var y = y0 + Math.sin((x + scroll * 0.7) * 0.045 + row) * 6;
+        if (x === 0) g.moveTo(x, y); else g.lineTo(x, y);
+      }
+      g.stroke();
+    }
+    g.restore();
+
+    // 浮沫点
+    g.fillStyle = 'rgba(255,255,255,.08)';
+    for (var i = 0; i < 18; i++) {
+      var fx = ((i * 97 + S.dist * 0.4) % (LW + 40)) - 20;
+      var fy = ((i * 53 + S.wave * 12) % (LH + 40)) - 20;
+      g.beginPath();
+      g.arc(fx, fy, 1.2 + (i % 3) * 0.4, 0, Math.PI * 2);
+      g.fill();
+    }
+  }
+
+  function drawResItem(r) {
+    var def = RES[r.type];
+    var by = Math.sin(r.bob) * 2.5;
+    g.save();
+    g.translate(r.x, r.y + by);
+    g.rotate(r.rot * 0.15);
+    g.fillStyle = 'rgba(0,0,0,.12)';
+    g.beginPath();
+    g.ellipse(0, def.r * 0.9, def.r * 0.9, def.r * 0.35, 0, 0, Math.PI * 2);
+    g.fill();
+
+    if (r.type === 'wood') {
+      rr(g, -11, -5, 22, 10, 3);
+      g.fillStyle = C.wood; g.fill();
+      g.fillStyle = 'rgba(255,255,255,.2)';
+      g.fillRect(-9, -3, 16, 2);
+    } else if (r.type === 'plastic') {
+      g.beginPath();
+      g.moveTo(-6, 4); g.lineTo(-4, -7); g.lineTo(4, -7); g.lineTo(6, 4);
+      g.closePath();
+      g.fillStyle = C.plastic; g.fill();
+      g.fillStyle = 'rgba(255,255,255,.25)';
+      g.fillRect(-3, -5, 3, 7);
+    } else if (r.type === 'food') {
+      g.beginPath();
+      g.arc(0, 0, 8, 0, Math.PI * 2);
+      g.fillStyle = C.food; g.fill();
+      g.fillStyle = 'rgba(255,255,255,.3)';
+      g.beginPath(); g.arc(-2, -2, 2.5, 0, Math.PI * 2); g.fill();
+    } else if (r.type === 'water') {
+      g.beginPath();
+      g.arc(0, 0, 8, 0, Math.PI * 2);
+      g.fillStyle = C.water; g.fill();
+      g.strokeStyle = 'rgba(255,255,255,.4)';
+      g.lineWidth = 1.5;
+      g.beginPath(); g.arc(0, 0, 4.5, 0, Math.PI * 2); g.stroke();
+    } else {
+      g.strokeStyle = C.rope;
+      g.lineWidth = 2.5;
+      g.beginPath();
+      g.arc(0, 0, 6, 0.2, Math.PI * 1.7);
+      g.stroke();
+      g.beginPath();
+      g.arc(2, 1, 3.5, 0.5, Math.PI * 1.9);
+      g.stroke();
+    }
+    g.restore();
+  }
+
+  function drawBoat() {
+    g.save();
+    g.translate(S.bx, S.by);
+    g.rotate(S.bAng + Math.PI / 2);
+
+    // 阴影
+    g.fillStyle = 'rgba(0,0,0,.15)';
+    g.beginPath();
+    g.ellipse(0, 8, 16, 8, 0, 0, Math.PI * 2);
+    g.fill();
+
+    // 船体
+    g.beginPath();
+    g.moveTo(0, -22);
+    g.quadraticCurveTo(14, -8, 12, 14);
+    g.quadraticCurveTo(8, 20, 0, 21);
+    g.quadraticCurveTo(-8, 20, -12, 14);
+    g.quadraticCurveTo(-14, -8, 0, -22);
+    g.closePath();
+    g.fillStyle = C.boat;
+    g.fill();
+    g.strokeStyle = C.boatDark;
+    g.lineWidth = 1.5;
+    g.stroke();
+
+    // 甲板线
+    g.strokeStyle = 'rgba(255,255,255,.25)';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(-8, 6); g.lineTo(8, 6);
+    g.stroke();
+
+    // 帆
+    var sailH = 16 + S.up.sail * 2;
+    g.fillStyle = C.sail;
+    g.strokeStyle = 'rgba(74,71,65,.2)';
+    g.lineWidth = 1;
+    g.beginPath();
+    g.moveTo(0, -16);
+    g.lineTo(0, -16 + sailH);
+    g.quadraticCurveTo(12, -10, 10, -16 + sailH * 0.3);
+    g.closePath();
+    g.fill();
+    g.stroke();
+
+    // 桅杆
+    g.strokeStyle = C.boatDark;
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(0, -18); g.lineTo(0, -16 + sailH + 2);
+    g.stroke();
+
+    // 货舱指示
+    if (S.up.hold > 0) {
+      g.fillStyle = 'rgba(255,255,255,.35)';
+      rr(g, -6, 10, 12, 6, 2);
+      g.fill();
+    }
+
+    g.restore();
+
+    // 拖曳水花
+    if (S.bSpd > 40) {
+      g.fillStyle = 'rgba(255,255,255,.2)';
+      for (var i = 0; i < 3; i++) {
+        var a = S.bAng + Math.PI + rnd(-0.4, 0.4);
+        var dd = 18 + i * 6 + rnd(0, 4);
+        g.beginPath();
+        g.arc(S.bx + Math.cos(a) * dd, S.by + Math.sin(a) * dd, 1.5 + i * 0.3, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+  }
+
+  function drawWeatherFx() {
+    var wx = WX[S.wx];
+
+    // 雨
+    if (S.wx === 'rain' || S.wx === 'storm') {
+      var n = S.wx === 'storm' ? 70 : 40;
+      g.strokeStyle = S.wx === 'storm' ? 'rgba(220,230,240,.35)' : 'rgba(230,240,245,.3)';
+      g.lineWidth = 1;
+      for (var i = 0; i < n; i++) {
+        var x = ((i * 47 + S.wave * 220) % (LW + 40)) - 20;
+        var y = ((i * 83 + S.wave * 380) % (LH + 40)) - 20;
+        g.beginPath();
+        g.moveTo(x, y);
+        g.lineTo(x - 3, y + 12);
+        g.stroke();
+      }
+    }
+
+    // 雾
+    if (S.wx === 'fog') {
+      g.fillStyle = 'rgba(200,202,202,.35)';
+      for (var f = 0; f < 4; f++) {
+        var fx = ((f * 120 + S.wave * 10) % (LW + 160)) - 80;
+        var fy = 80 + f * 130;
+        g.beginPath();
+        g.ellipse(fx, fy, 90, 40, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+    }
+
+    // 闪电
+    if (S.wx === 'storm' && Math.random() < 0.008) {
+      S.shake = Math.max(S.shake, 1);
+      g.fillStyle = 'rgba(255,255,255,.25)';
+      g.fillRect(0, 0, LW, LH);
+    }
+
+    // 整体暗角
+    if (wx.dim > 0) {
+      g.fillStyle = 'rgba(30,36,42,' + wx.dim + ')';
+      g.fillRect(0, 0, LW, LH);
+    }
+  }
+
+  function draw() {
+    g.save();
+    if (S.shake > 0) {
+      g.translate(rnd(-2, 2) * S.shake, rnd(-2, 2) * S.shake);
+    }
+
+    drawSea();
+
+    for (var i = 0; i < S.res.length; i++) drawResItem(S.res[i]);
+
+    // 网范围提示
+    if (S.up.net > 0 && S.phase === 'play') {
+      g.strokeStyle = 'rgba(122,141,124,.2)';
+      g.lineWidth = 1;
+      g.setLineDash([4, 4]);
+      g.beginPath();
+      g.arc(S.bx, S.by, 40 + S.up.net * 18, 0, Math.PI * 2);
+      g.stroke();
+      g.setLineDash([]);
+    }
+
+    if (S.phase !== 'idle') drawBoat();
+
+    // 粒子
+    for (var f = 0; f < S.fx.length; f++) {
+      var p = S.fx[f];
+      g.globalAlpha = clamp(p.life / p.max, 0, 1);
+      g.fillStyle = p.c;
+      g.beginPath();
+      g.arc(p.x, p.y, p.s, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.globalAlpha = 1;
+
+    drawWeatherFx();
+
+    // 生命条（画布内顶栏）
+    if (S.phase === 'play') {
+      var barW = 64, barH = 5;
+      var bx = LW / 2 - barW / 2, by = 10;
+      g.fillStyle = 'rgba(255,255,255,.35)';
+      rr(g, bx, by, barW, barH, 2.5); g.fill();
+      var ratio = clamp(S.hull / S.hullMax, 0, 1);
+      g.fillStyle = ratio > 0.4 ? C.good : C.bad;
+      rr(g, bx, by, barW * ratio, barH, 2.5); g.fill();
+
+      // 饥饿 / 口渴
+      g.fillStyle = 'rgba(255,255,255,.28)';
+      rr(g, bx, by + 8, barW, 3, 1.5); g.fill();
+      g.fillStyle = S.hunger > 30 ? 'rgba(192,160,94,.85)' : C.bad;
+      rr(g, bx, by + 8, barW * clamp(S.hunger / 100, 0, 1), 3, 1.5); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.28)';
+      rr(g, bx, by + 14, barW, 3, 1.5); g.fill();
+      g.fillStyle = S.thirst > 30 ? 'rgba(124,163,148,.85)' : C.bad;
+      rr(g, bx, by + 14, barW * clamp(S.thirst / 100, 0, 1), 3, 1.5); g.fill();
+    }
+
+    g.restore();
+  }
+
+  /* ---------- 主循环 ---------- */
+  var last = 0;
+  function frame(ts) {
+    requestAnimationFrame(frame);
+    if (!last) last = ts;
+    var dt = Math.min(0.05, (ts - last) / 1000);
+    last = ts;
+    if (S.phase === 'play' && !S.paused) update(dt);
+    else {
+      // 待机时也推波浪
+      S.wave += dt;
+      if (toastT > 0) {
+        toastT -= dt;
+        if (toastT <= 0) toastEl.classList.remove('show');
+      }
+    }
+    draw();
+  }
+
+  resize();
+  syncStats();
+  syncInv();
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
