@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="同色连线">
+<meta name="theme-color" content="#EDE9E3">
+<title>同色连线</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#EDE9E3}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    color:#4A4741;
+    -webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+  }
+  #app{
+    position:relative;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:radial-gradient(120% 80% at 50% 0%,#FAF7F2 0%,#E4DFD7 62%);
+  }
+  header{flex:0 0 auto;padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .title{font-size:17px;font-weight:600;letter-spacing:1px}
+  .title small{display:block;font-size:11px;font-weight:400;color:#9C948A;letter-spacing:0;margin-top:2px}
+  .right{display:flex;align-items:center;gap:12px}
+  .stats{display:flex;align-items:center;gap:14px}
+  .stat{text-align:right;line-height:1.1}
+  .stat b{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:10px;color:#9C948A;margin-top:1px}
+  .sndbtn{
+    width:34px;height:34px;flex:0 0 auto;border-radius:50%;font-size:15px;line-height:1;
+    font-family:inherit;color:#7B746B;background:rgba(255,255,255,.62);
+    border:1px solid rgba(74,71,65,.14);cursor:pointer;transition:.15s;
+  }
+  .sndbtn:active{background:rgba(74,71,65,.09)}
+  .chips{flex:0 0 auto;display:flex;gap:8px;padding:0 16px 8px}
+  .chips button{
+    flex:1;padding:7px 0;font-size:12px;font-family:inherit;color:#7B746B;
+    background:rgba(255,255,255,.62);border:1px solid rgba(74,71,65,.14);
+    border-radius:999px;cursor:pointer;transition:.18s;
+  }
+  .chips button.on{background:rgba(108,154,107,.24);border-color:rgba(108,141,124,.6);color:#3F4A41}
+  #wrap{flex:1 1 auto;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  footer{flex:0 0 auto;display:flex;gap:8px;padding:10px 16px 16px}
+  footer button{
+    flex:1;padding:13px 0;font-size:13px;font-family:inherit;color:#57524B;
+    background:rgba(255,255,255,.66);border:1px solid rgba(74,71,65,.13);
+    border-radius:12px;cursor:pointer;transition:.15s;
+  }
+  footer button:active{background:rgba(74,71,65,.09)}
+  #rotate{
+    position:fixed;inset:0;z-index:50;display:none;
+    align-items:center;justify-content:center;flex-direction:column;gap:14px;
+    background:#EDE9E3;text-align:center;padding:24px;
+  }
+  #rotate .ic{width:54px;height:84px;border:2px solid #B4ACA2;border-radius:10px;position:relative}
+  #rotate .ic::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:12px;margin:-6px 0 0 -13px;border:2px solid #B4ACA2;border-radius:3px}
+  #rotate p{font-size:15px;color:#857E75}
+  #mask{
+    position:absolute;inset:0;z-index:20;display:none;
+    align-items:center;justify-content:center;background:rgba(237,233,227,.86);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  }
+  #mask.show{display:flex}
+  .card{text-align:center;padding:28px 30px;border-radius:20px;background:#FBF8F3;border:1px solid rgba(74,71,65,.12);min-width:238px}
+  .card h2{font-size:20px;font-weight:600;margin-bottom:6px}
+  .card p{font-size:13px;color:#8A837A;margin-bottom:20px}
+  .card .row{display:flex;gap:10px}
+  .card button{
+    flex:1;padding:11px 0;font-size:14px;font-family:inherit;border-radius:11px;cursor:pointer;border:none;
+    background:rgba(74,71,65,.07);color:#57524B;
+  }
+  .card button.pri{background:#7A8D7C;color:#fff}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="title">同色连线<small id="sub">第 1 关 · 5×5 · 线路不能交叉</small></div>
+    <div class="right">
+      <div class="stats">
+        <div class="stat"><b id="lv">1</b><span>关卡</span></div>
+        <div class="stat"><b id="ln">0/0</b><span>已连</span></div>
+      </div>
+      <button class="sndbtn" id="snd" title="音效">♪</button>
+    </div>
+  </header>
+
+  <div class="chips" id="chips">
+    <button data-i="0">简单</button>
+    <button data-i="1">普通</button>
+    <button data-i="2">困难</button>
+    <button data-i="3">地狱</button>
+  </div>
+
+  <div id="wrap"><canvas id="cv"></canvas></div>
+
+  <footer>
+    <button id="hint">提示</button>
+    <button id="reset">重开</button>
+    <button id="skip">新关</button>
+  </footer>
+
+  <div id="mask">
+    <div class="card">
+      <h2 id="mt">第 1 关完成</h2>
+      <p id="mp"></p>
+      <div class="row">
+        <button id="again">再玩一次</button>
+        <button id="next" class="pri">下一关</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="rotate">
+  <div class="ic"></div>
+  <p>请把手机竖过来</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 常量 ---------- */
+  var PAL = ['#6C9A6B', '#6289BC', '#C68A5E', '#BC7186', '#C0A44E', '#57989E', '#937FB8'];
+  var LEVELS = [
+    { name: '简单', N: 5, minP: 4, maxP: 5, base: 2 },
+    { name: '普通', N: 6, minP: 5, maxP: 6, base: 3 },
+    { name: '困难', N: 7, minP: 6, maxP: 7, base: 3 },
+    { name: '地狱', N: 8, minP: 6, maxP: 7, base: 3 }
+  ];
+  var KEY = 'colorlink.v1';
+
+  /* ---------- dom ---------- */
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var wrap = document.getElementById('wrap');
+  var elLv = document.getElementById('lv');
+  var elLn = document.getElementById('ln');
+  var elSub = document.getElementById('sub');
+  var elMask = document.getElementById('mask');
+  var elMt = document.getElementById('mt');
+  var elMp = document.getElementById('mp');
+  var elRotate = document.getElementById('rotate');
+  var elChips = document.getElementById('chips');
+  var btnSnd = document.getElementById('snd');
+
+  /* ---------- 状态 ---------- */
+  var W = 0, H = 0, DPR = 1;
+  var N = 5, P = 0;
+  var pairs = [];      // [{a,b}] 两个端点格
+  var solution = [];   // [cells[]] 内嵌参考解，用于提示
+  var dotAt = [];      // 格 -> 配对编号 / -1
+  var cellPath = [];   // 格 -> 占用它的连线编号 / -1
+  var paths = [];      // 连线编号 -> 格序列（含起点圆点）
+  var dragP = -1, won = false, lastPerfect = false;
+  var lvArr = [1, 1, 1, 1], pfArr = [0, 0, 0, 0], diff = 0, soundOn = true;
+  var cell = 40, ox = 0, oy = 0;
+  var rings = [], confetti = [], maskTimer = 0;
+
+  /* ---------- 工具 ---------- */
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function hex2rgb(h) { return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)]; }
+  function shade(h, t) {
+    var c = hex2rgb(h), r, g, b;
+    if (t > 0) { r = c[0] * (1 - t); g = c[1] * (1 - t); b = c[2] * (1 - t); }
+    else { r = c[0] + (255 - c[0]) * -t; g = c[1] + (255 - c[1]) * -t; b = c[2] + (255 - c[2]) * -t; }
+    return 'rgb(' + (r | 0) + ',' + (g | 0) + ',' + (b | 0) + ')';
+  }
+  function cellPt(id) { return [ox + (id % N + 0.5) * cell, oy + (((id / N) | 0) + 0.5) * cell]; }
+  function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  /* ---------- 关卡生成（哈密顿一笔画切分，保证可解） ----------
+     先在 N×N 上随机走出一条经过全部格子的哈密顿通路，
+     随机旋转/镜像后切成若干段，每段两端就是一对同色圆点；
+     整条通路本身就是一局参考解，所以每一局必然可通关。 */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function hamPath(N, rnd) {
+    var total = N * N, visited = new Array(total), path = [], found = false, budget = 0;
+    function dfs(cur) {
+      if (found) return;
+      if (path.length === total) { found = true; return; }
+      if (--budget <= 0) return;
+      var r = (cur / N) | 0, c = cur % N, list = [], deg = [], i, j;
+      if (r > 0 && !visited[cur - N]) list.push(cur - N);
+      if (r < N - 1 && !visited[cur + N]) list.push(cur + N);
+      if (c > 0 && !visited[cur - 1]) list.push(cur - 1);
+      if (c < N - 1 && !visited[cur + 1]) list.push(cur + 1);
+      // Warnsdorff 启发：先走出路少的格子，加随机抖动
+      for (i = 0; i < list.length; i++) {
+        var n = list[i], nr = (n / N) | 0, nc = n % N, d = 0;
+        if (nr > 0 && !visited[n - N]) d++;
+        if (nr < N - 1 && !visited[n + N]) d++;
+        if (nc > 0 && !visited[n - 1]) d++;
+        if (nc < N - 1 && !visited[n + 1]) d++;
+        deg.push(d + rnd() * 0.99);
+      }
+      for (i = 0; i < list.length; i++)
+        for (j = i + 1; j < list.length; j++)
+          if (deg[j] < deg[i]) {
+            var a = list[i]; list[i] = list[j]; list[j] = a;
+            var b = deg[i]; deg[i] = deg[j]; deg[j] = b;
+          }
+      for (i = 0; i < list.length; i++) {
+        var nn = list[i];
+        visited[nn] = 1; path.push(nn);
+        dfs(nn);
+        if (found) return;
+        visited[nn] = 0; path.pop();
+        if (budget <= 0) return;
+      }
+    }
+    for (var attempt = 0; attempt < 8 && !found; attempt++) {
+      for (var i = 0; i < total; i++) visited[i] = 0;
+      path = [];
+      var start = (rnd() * total) | 0;
+      visited[start] = 1; path.push(start);
+      budget = 30000;
+      dfs(start);
+    }
+    if (found) return path.slice();
+    // 兜底：蛇形一笔画，必然存在
+    var sn = [], r2, c2;
+    for (r2 = 0; r2 < N; r2++) for (c2 = 0; c2 < N; c2++) sn.push(r2 * N + (r2 % 2 ? N - 1 - c2 : c2));
+    return sn;
+  }
+  function transform(cells, N, rnd) {
+    var mode = (rnd() * 8) | 0, out = [], i;
+    function map(id) {
+      var r = (id / N) | 0, c = id % N, t;
+      if (mode & 4) c = N - 1 - c;
+      if ((mode & 3) === 1) { t = r; r = c; c = N - 1 - t; }
+      else if ((mode & 3) === 2) { r = N - 1 - r; c = N - 1 - c; }
+      else if ((mode & 3) === 3) { t = r; r = N - 1 - c; c = t; }
+      return r * N + c;
+    }
+    for (i = 0; i < cells.length; i++) out.push(map(cells[i]));
+    return out;
+  }
+  function genLevel(df, lv) {
+    var L = LEVELS[df];
+    var rnd = mulberry32(((df + 1) * 7349 + lv * 9241 + 20260915) | 0);
+    var hp = transform(hamPath(L.N, rnd), L.N, rnd);
+    var total = hp.length;
+    var np = L.minP + ((rnd() * (L.maxP - L.minP + 1)) | 0);
+    // 切成 np 段，每段至少 base 格，余量随机摊
+    var lens = [], i, j;
+    for (i = 0; i < np; i++) lens.push(L.base);
+    var extra = total - L.base * np;
+    for (i = 0; i < extra; i++) lens[(rnd() * np) | 0]++;
+    var segs = [], off = 0;
+    for (i = 0; i < np; i++) { segs.push(hp.slice(off, off + lens[i])); off += lens[i]; }
+    // 打乱段序决定配色
+    for (i = segs.length - 1; i > 0; i--) {
+      j = (rnd() * (i + 1)) | 0;
+      var tt = segs[i]; segs[i] = segs[j]; segs[j] = tt;
+    }
+    var prs = [], sol = [];
+    for (i = 0; i < np; i++) {
+      var s = segs[i];
+      prs.push({ a: s[0], b: s[s.length - 1] });
+      sol.push(s.slice());
+    }
+    return { N: L.N, pairs: prs, solution: sol };
+  }
+
+  /* ---------- 棋盘状态 ---------- */
+  function clearPath(p) {
+    var arr = paths[p], i;
+    if (!arr) return;
+    for (i = 0; i < arr.length; i++) cellPath[arr[i]] = -1;
+    paths[p] = null;
+  }
+  // 保留前 keep 格，其余清除
+  function truncTo(p, keep) {
+    var arr = paths[p], i;
+    if (!arr) return;
+    for (i = keep; i < arr.length; i++) cellPath[arr[i]] = -1;
+    paths[p] = keep > 0 ? arr.slice(0, keep) : null;
+  }
+  function cutAt(p, t) {
+    var idx = paths[p] ? paths[p].indexOf(t) : -1;
+    if (idx >= 0) truncTo(p, idx);
+  }
+  function completeOf(p) {
+    var a = paths[p];
+    return !!(a && a.length > 1 && a[a.length - 1] !== a[0] && dotAt[a[0]] === p && dotAt[a[a.length - 1]] === p);
+  }
+  function completeCount() {
+    var n = 0, p;
+    for (p = 0; p < P; p++) if (completeOf(p)) n++;
+    return n;
+  }
+  function coveredCount() {
+    var n = 0, i;
+    for (i = 0; i < N * N; i++) if (cellPath[i] >= 0) n++;
+    return n;
+  }
+
+  /* ---------- 拖动规则 ---------- */
+  // 返回 0=被挡停 1=有变化 2=原地不动
+  function stepInto(t) {
+    var p = dragP, arr = paths[p], L = arr.length;
+    if (L >= 2 && t === arr[L - 2]) {          // 原路回退一格
+      cellPath[arr[L - 1]] = -1;
+      arr.pop();
+      SFX.back();
+      return 1;
+    }
+    if (arr.indexOf(t) >= 0) return 2;          // 自己身上，忽略
+    if (L > 1 && arr[L - 1] !== arr[0] && dotAt[arr[L - 1]] === p) return 2; // 已接通，锁定终点
+    if (dotAt[t] >= 0 && dotAt[t] !== p) return 0;                            // 他色圆点，挡住
+    if (cellPath[t] >= 0) cutAt(cellPath[t], t);                               // 剪断别人的线
+    arr.push(t);
+    cellPath[t] = p;
+    if (dotAt[t] === p && t !== arr[0]) {       // 接通一对
+      var pt = cellPt(t);
+      rings.push({ x: pt[0], y: pt[1], t0: performance.now(), c: PAL[p] });
+      SFX.done();
+      hud();
+    } else {
+      SFX.tick();
+    }
+    return 1;
+  }
+  function walkTo(t) {
+    var guard = 0;
+    while (dragP >= 0 && guard++ < 100) {
+      var arr = paths[dragP], cur = arr[arr.length - 1];
+      if (cur === t) return;
+      var r0 = (cur / N) | 0, c0 = cur % N, r1 = (t / N) | 0, c1 = t % N, sr = 0, sc = 0;
+      if (Math.abs(r1 - r0) >= Math.abs(c1 - c0)) sr = r1 > r0 ? 1 : -1;
+      else sc = c1 > c0 ? 1 : -1;
+      var nt = (r0 + sr) * N + (c0 + sc);
+      if (stepInto(nt) !== 1) return;
+    }
+  }
+  function beginDrag(t) {
+    if (won) return;
+    var p = cellPath[t];
+    if (p >= 0) {                               // 抓住已有线：从落点截断并接管
+      var idx = paths[p].indexOf(t);
+      truncTo(p, idx + 1);
+      dragP = p;
+      return;
+    }
+    var d = dotAt[t];
+    if (d >= 0) {                               // 从圆点起笔
+      clearPath(d);
+      paths[d] = [t];
+      cellPath[t] = d;
+      dragP = d;
+      SFX.tap();
+    }
+  }
+  function endDrag() {
+    if (dragP < 0) return;
+    dragP = -1;
+    if (!won) checkWin();
+    hud();
+  }
+
+  /* ---------- 胜负 ---------- */
+  function checkWin() {
+    if (won || completeCount() < P) return;
+    won = true;
+    lastPerfect = coveredCount() === N * N;
+    if (lastPerfect) pfArr[diff]++;
+    save();
+    SFX.win();
+    spawnConfetti();
+    maskTimer = setTimeout(function () {
+      elMt.textContent = '第 ' + lvArr[diff] + ' 关完成';
+      elMp.textContent = lastPerfect
+        ? '完美填满全盘！累计完美 × ' + pfArr[diff]
+        : '共 ' + P + ' 对连线 · 试试填满全盘拿「完美」';
+      elMask.classList.add('show');
+    }, 900);
+  }
+  function hint() {
+    if (won) return;
+    var cands = [], p;
+    for (p = 0; p < P; p++) if (!completeOf(p)) cands.push(p);
+    if (!cands.length) return;
+    var pick = cands[(Math.random() * cands.length) | 0];
+    var seg = solution[pick], i;
+    clearPath(pick);
+    paths[pick] = [seg[0]];
+    cellPath[seg[0]] = pick;
+    for (i = 1; i < seg.length; i++) {
+      var t = seg[i];
+      if (cellPath[t] >= 0 && cellPath[t] !== pick) cutAt(cellPath[t], t);
+      paths[pick].push(t);
+      cellPath[t] = pick;
+    }
+    SFX.hint();
+    hud();
+    checkWin();
+  }
+
+  /* ---------- 关卡流转 ---------- */
+  function newGame() {
+    var g = genLevel(diff, lvArr[diff]), i;
+    N = g.N;
+    pairs = g.pairs;
+    P = pairs.length;
+    solution = g.solution;
+    dotAt = []; cellPath = []; paths = [];
+    for (i = 0; i < N * N; i++) { dotAt.push(-1); cellPath.push(-1); }
+    for (i = 0; i < P; i++) { dotAt[pairs[i].a] = i; dotAt[pairs[i].b] = i; paths.push(null); }
+    won = false; dragP = -1;
+    rings = []; confetti = [];
+    clearTimeout(maskTimer);
+    elMask.classList.remove('show');
+    resize();
+    hud();
+  }
+  function resetBoard() {
+    for (var p = 0; p < P; p++) clearPath(p);
+    won = false; dragP = -1;
+    rings = []; confetti = [];
+    clearTimeout(maskTimer);
+    elMask.classList.remove('show');
+    hud();
+  }
+
+  /* ---------- 存档 ---------- */
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ v: 1, df: diff, lv: lvArr, pf: pfArr, s: soundOn ? 1 : 0 }));
+    } catch (e) {}
+  }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if (!s || s.v !== 1) return;
+      var i;
+      if (typeof s.df === 'number' && s.df >= 0 && s.df < LEVELS.length) diff = s.df | 0;
+      if (Array.isArray(s.lv) && s.lv.length === LEVELS.length) {
+        for (i = 0; i < s.lv.length; i++)
+          if (typeof s.lv[i] === 'number' && s.lv[i] >= 1) lvArr[i] = Math.min(9999, s.lv[i] | 0);
+      }
+      if (Array.isArray(s.pf) && s.pf.length === LEVELS.length) {
+        for (i = 0; i < s.pf.length; i++)
+          if (typeof s.pf[i] === 'number' && s.pf[i] >= 0) pfArr[i] = Math.min(9999, s.pf[i] | 0);
+      }
+      soundOn = s.s !== 0;
+    } catch (e) {}
+  }
+
+  /* ---------- 音效 ---------- */
+  var actx = null;
+  function ac() {
+    try {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        actx = new AC();
+      }
+      if (actx.state === 'suspended') actx.resume();
+      return actx;
+    } catch (e) { return null; }
+  }
+  function tone(freq, dur, type, vol, at) {
+    if (!soundOn) return;
+    var a = ac(); if (!a) return;
+    try {
+      var t0 = a.currentTime + (at || 0);
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  }
+  var SFX = {
+    tap: function () { tone(500, 0.04, 'triangle', 0.05); },
+    tick: function () { tone(640, 0.03, 'triangle', 0.028); },
+    back: function () { tone(430, 0.03, 'triangle', 0.02); },
+    done: function () { tone(660, 0.1, 'sine', 0.12); tone(990, 0.16, 'sine', 0.09, 0.08); },
+    hint: function () { tone(780, 0.12, 'sine', 0.08); },
+    win: function () {
+      var seq = [523, 659, 784, 1047], i;
+      for (i = 0; i < seq.length; i++) tone(seq[i], 0.22, 'sine', 0.11, i * 0.1);
+    }
+  };
+
+  /* ---------- 渲染 ---------- */
+  function resize() {
+    DPR = Math.min(3, window.devicePixelRatio || 1);
+    W = wrap.clientWidth || window.innerWidth;
+    H = wrap.clientHeight || Math.round(window.innerHeight * 0.6);
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    var m = Math.min(W, H);
+    cell = (m - 30) / N;
+    ox = (W - cell * N) / 2;
+    oy = (H - cell * N) / 2;
+    var TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+  elRotate.style.display = (TOUCH && window.innerWidth > window.innerHeight) ? 'flex' : 'none';
+  }
+  function drawPathCurve(cells, color, alpha, w) {
+    if (cells.length < 2) return;
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = color; ctx.globalAlpha = alpha; ctx.lineWidth = w;
+    ctx.beginPath();
+    var p0 = cellPt(cells[0]);
+    ctx.moveTo(p0[0], p0[1]);
+    var i, a, b;
+    for (i = 1; i < cells.length - 1; i++) {
+      a = cellPt(cells[i]); b = cellPt(cells[i + 1]);
+      ctx.quadraticCurveTo(a[0], a[1], (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+    }
+    var z = cellPt(cells[cells.length - 1]);
+    ctx.lineTo(z[0], z[1]);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+  function drawBall(x, y, color, done, t) {
+    var r = cell * 0.30;
+    if (done) {
+      ctx.beginPath();
+      ctx.arc(x, y, r * 1.55 + Math.sin(t * 3.2) * cell * 0.02, 0, Math.PI * 2);
+      ctx.strokeStyle = color; ctx.globalAlpha = 0.3;
+      ctx.lineWidth = Math.max(2, cell * 0.055);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    var g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.4, r * 0.15, x, y, r);
+    g.addColorStop(0, shade(color, 0.42));
+    g.addColorStop(1, shade(color, -0.18));
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = Math.max(1.4, cell * 0.05);
+    ctx.strokeStyle = shade(color, -0.4); ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(x - r * 0.34, y - r * 0.38, r * 0.26, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.55)'; ctx.fill();
+  }
+  function spawnConfetti() {
+    var cx = ox + cell * N / 2, cy = oy + cell * N * 0.45, i;
+    var cols = PAL.concat(['#B4ACA2', '#C8B89A']);
+    for (i = 0; i < 44; i++) {
+      confetti.push({
+        x: cx, y: cy,
+        vx: (Math.random() * 2 - 1) * 170,
+        vy: -70 - Math.random() * 190,
+        rot: Math.random() * 6.28, vr: (Math.random() * 2 - 1) * 9,
+        size: 3 + Math.random() * 3.4,
+        life: 1.3 + Math.random() * 0.7,
+        c: cols[(Math.random() * cols.length) | 0]
+      });
+    }
+  }
+  function draw(t) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.save();
+    ctx.shadowColor = 'rgba(74,71,65,.10)'; ctx.shadowBlur = 18; ctx.shadowOffsetY = 4;
+    rr(ox - 14, oy - 14, cell * N + 28, cell * N + 28, 18);
+    ctx.fillStyle = '#FBF8F3'; ctx.fill();
+    ctx.restore();
+    rr(ox - 14, oy - 14, cell * N + 28, cell * N + 28, 18);
+    ctx.strokeStyle = 'rgba(74,71,65,.10)'; ctx.lineWidth = 1; ctx.stroke();
+    // 格点
+    ctx.fillStyle = '#D9D2C6';
+    var r, c, x, y, i, p, age;
+    for (r = 0; r < N; r++) for (c = 0; c < N; c++) {
+      x = ox + (c + 0.5) * cell; y = oy + (r + 0.5) * cell;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(1.4, cell * 0.04), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 连线
+    for (p = 0; p < P; p++) {
+      if (paths[p] && paths[p].length > 1) {
+        var done = completeOf(p);
+        drawPathCurve(paths[p], PAL[p], done ? 0.95 : 0.8, cell * (done ? 0.46 : 0.42));
+      }
+    }
+    // 接通波纹
+    for (i = rings.length - 1; i >= 0; i--) {
+      age = (t * 1000 - rings[i].t0) / 450;
+      if (age >= 1) { rings.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(rings[i].x, rings[i].y, cell * (0.35 + age * 1.5), 0, Math.PI * 2);
+      ctx.strokeStyle = rings[i].c;
+      ctx.globalAlpha = 0.5 * (1 - age);
+      ctx.lineWidth = Math.max(2, cell * 0.07);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    // 圆点
+    for (p = 0; p < P; p++) {
+      var done2 = completeOf(p);
+      var pa = cellPt(pairs[p].a), pb = cellPt(pairs[p].b);
+      drawBall(pa[0], pa[1], PAL[p], done2, t);
+      drawBall(pb[0], pb[1], PAL[p], done2, t);
+    }
+    // 彩纸
+    for (i = confetti.length - 1; i >= 0; i--) {
+      var f = confetti[i];
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(f.rot);
+      ctx.globalAlpha = clamp(f.life, 0, 1);
+      ctx.fillStyle = f.c;
+      ctx.fillRect(-f.size / 2, -f.size / 2, f.size, f.size * 0.62);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function step(dt) {
+    var i;
+    for (i = confetti.length - 1; i >= 0; i--) {
+      var f = confetti[i];
+      f.vy += 460 * dt;
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      f.rot += f.vr * dt;
+      f.life -= dt;
+      if (f.life <= 0) confetti.splice(i, 1);
+    }
+  }
+
+  /* ---------- HUD ---------- */
+  function hud() {
+    elLv.textContent = lvArr[diff];
+    elLn.textContent = completeCount() + '/' + P;
+    elSub.textContent = '第 ' + lvArr[diff] + ' 关 · ' + N + '×' + N + ' · 线路不能交叉';
+    var btns = elChips.getElementsByTagName('button'), i;
+    for (i = 0; i < btns.length; i++) btns[i].className = (i === diff) ? 'on' : '';
+  }
+
+  /* ---------- 输入 ---------- */
+  function evtCell(e) {
+    var rect = cv.getBoundingClientRect();
+    var x = e.clientX - rect.left - ox, y = e.clientY - rect.top - oy;
+    if (x < 0 || y < 0 || x >= cell * N || y >= cell * N) return -1;
+    return ((y / cell) | 0) * N + ((x / cell) | 0);
+  }
+  cv.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    ac();
+    var t = evtCell(e);
+    if (t < 0) return;
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+    beginDrag(t);
+  }, { passive: false });
+  cv.addEventListener('pointermove', function (e) {
+    if (dragP < 0) return;
+    e.preventDefault();
+    var t = evtCell(e);
+    if (t < 0) return;
+    walkTo(t);
+  }, { passive: false });
+  window.addEventListener('pointerup', endDrag);
+  window.addEventListener('pointercancel', endDrag);
+  cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  elChips.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || t.tagName !== 'BUTTON') return;
+    var i = +t.getAttribute('data-i');
+    if (i === diff) return;
+    ac();
+    diff = i;
+    save();
+    newGame();
+  });
+  document.getElementById('hint').addEventListener('click', function () { ac(); hint(); });
+  document.getElementById('reset').addEventListener('click', function () { ac(); resetBoard(); });
+  document.getElementById('skip').addEventListener('click', function () {
+    ac();
+    lvArr[diff] = Math.min(9999, lvArr[diff] + 1);
+    save();
+    newGame();
+  });
+  document.getElementById('again').addEventListener('click', function () { ac(); resetBoard(); });
+  document.getElementById('next').addEventListener('click', function () {
+    ac();
+    lvArr[diff] = Math.min(9999, lvArr[diff] + 1);
+    save();
+    newGame();
+  });
+  btnSnd.addEventListener('click', function () {
+    soundOn = !soundOn;
+    btnSnd.style.opacity = soundOn ? 1 : 0.38;
+    ac();
+    save();
+  });
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 220); });
+
+  /* ---------- 启动 ---------- */
+  load();
+  btnSnd.style.opacity = soundOn ? 1 : 0.38;
+  newGame();
+  resize();
+
+  var lastT = 0;
+  function frame(ts) {
+    var t = ts / 1000, dt = lastT ? Math.min(0.05, t - lastT) : 0.016;
+    lastT = t;
+    step(dt);
+    draw(t);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
