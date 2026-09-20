@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="围堵毛贼">
+<meta name="theme-color" content="#EDE9E3">
+<title>围堵毛贼</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:#EDE9E3}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+    color:#4A4741;
+    -webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    -webkit-touch-callout:none;
+    overscroll-behavior:none;
+    touch-action:manipulation;
+  }
+  #app{
+    position:relative;
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    display:flex;flex-direction:column;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:radial-gradient(120% 80% at 50% 0%,#FAF7F2 0%,#E4DFD7 62%);
+  }
+  header{flex:0 0 auto;padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .title{font-size:17px;font-weight:600;letter-spacing:1px}
+  .title small{display:block;font-size:11px;font-weight:400;color:#9C948A;letter-spacing:0;margin-top:2px}
+  .right{display:flex;align-items:center;gap:12px}
+  .stats{display:flex;align-items:center;gap:14px}
+  .stat{text-align:right;line-height:1.1}
+  .stat b{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+  .stat span{display:block;font-size:10px;color:#9C948A;margin-top:1px}
+  .sndbtn{
+    width:34px;height:34px;flex:0 0 auto;border-radius:50%;font-size:15px;line-height:1;
+    font-family:inherit;color:#7B746B;background:rgba(255,255,255,.62);
+    border:1px solid rgba(74,71,65,.14);cursor:pointer;transition:.15s;
+  }
+  .sndbtn:active{background:rgba(74,71,65,.09)}
+  .chips{flex:0 0 auto;display:flex;gap:8px;padding:0 16px 8px}
+  .chips button{
+    flex:1;padding:7px 0;font-size:12px;font-family:inherit;color:#7B746B;
+    background:rgba(255,255,255,.62);border:1px solid rgba(74,71,65,.14);
+    border-radius:999px;cursor:pointer;transition:.18s;
+  }
+  .chips button.on{background:rgba(155,123,94,.24);border-color:rgba(155,123,94,.6);color:#4A3C30}
+  #wrap{flex:1 1 auto;position:relative;min-height:0}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  #toast{
+    position:absolute;left:50%;top:10px;transform:translateX(-50%);
+    z-index:15;pointer-events:none;
+    font-size:12.5px;color:#4A4741;background:rgba(251,248,243,.92);
+    border:1px solid rgba(74,71,65,.12);border-radius:999px;
+    padding:7px 14px;white-space:nowrap;
+    opacity:0;transition:opacity .25s;
+    max-width:92%;overflow:hidden;text-overflow:ellipsis;
+  }
+  #toast.show{opacity:1}
+  footer{flex:0 0 auto;display:flex;gap:8px;padding:10px 16px 16px}
+  footer button{
+    flex:1;padding:13px 0;font-size:13px;font-family:inherit;color:#57524B;
+    background:rgba(255,255,255,.66);border:1px solid rgba(74,71,65,.13);
+    border-radius:12px;cursor:pointer;transition:.15s;
+  }
+  footer button:active{background:rgba(74,71,65,.09)}
+  #mask{
+    position:absolute;inset:0;z-index:20;display:none;
+    align-items:center;justify-content:center;background:rgba(237,233,227,.86);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  }
+  #mask.show{display:flex}
+  .card{text-align:center;padding:28px 30px;border-radius:20px;background:#FBF8F3;border:1px solid rgba(74,71,65,.12);min-width:238px;max-width:340px}
+  .card h2{font-size:20px;font-weight:600;margin-bottom:6px}
+  .card p{font-size:13px;color:#8A837A;margin-bottom:20px;white-space:pre-line;line-height:1.7;text-align:left}
+  .card .row{display:flex;gap:10px}
+  .card button{
+    flex:1;padding:11px 0;font-size:14px;font-family:inherit;border-radius:11px;cursor:pointer;border:none;
+    background:rgba(74,71,65,.07);color:#57524B;
+  }
+  .card button.pri{background:#9B7B5E;color:#fff}
+  #rotate{
+    position:fixed;inset:0;z-index:50;display:none;
+    align-items:center;justify-content:center;flex-direction:column;gap:14px;
+    background:#EDE9E3;text-align:center;padding:24px;
+  }
+  #rotate .ic{width:54px;height:84px;border:2px solid #B4ACA2;border-radius:10px;position:relative}
+  #rotate .ic::after{content:"";position:absolute;left:50%;top:50%;width:26px;height:12px;margin:-6px 0 0 -13px;border:2px solid #B4ACA2;border-radius:3px}
+  #rotate p{font-size:15px;color:#857E75}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="title">围堵毛贼<small id="sub">拖动衙役，堵死所有去路</small></div>
+    <div class="right">
+      <div class="stats">
+        <div class="stat"><b id="lv">1</b><span>关卡</span></div>
+        <div class="stat"><b id="mv">0</b><span>步数</span></div>
+      </div>
+      <button class="sndbtn" id="snd" title="音效">♪</button>
+    </div>
+  </header>
+
+  <div class="chips" id="chips">
+    <button data-i="0">简单</button>
+    <button data-i="1">普通</button>
+    <button data-i="2">困难</button>
+    <button data-i="3">地狱</button>
+  </div>
+
+  <div id="wrap">
+    <canvas id="cv"></canvas>
+    <div id="toast"></div>
+  </div>
+
+  <footer>
+    <button id="hint">提示</button>
+    <button id="reset">重开</button>
+    <button id="skip">新关</button>
+  </footer>
+
+  <div id="mask" class="show">
+    <div class="card">
+      <h2 id="mt">围堵毛贼</h2>
+      <p id="mp">栈桥架在水面上，毛贼想跳上岸边的小船逃走。
+点选衙役，再点亮起的木梁交点移动——一步只能走到相邻节点，不能和别人挤同一格。
+轮到毛贼时他会自己找活路；把他所有去路都堵死即可抓获。
+每一局都由求解器验过：按最优走法必有解。</p>
+      <div class="row"><button id="go" class="pri">开始</button></div>
+    </div>
+  </div>
+</div>
+
+<div id="rotate">
+  <div class="ic"></div>
+  <p>请把手机竖过来</p>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- 难度 ---------- */
+  var LEVELS = [
+    { name: '简单', cops: 4, allowAdj: false, tries: 400 },
+    { name: '普通', cops: 3, allowAdj: false, tries: 400 },
+    { name: '困难', cops: 3, allowAdj: true,  tries: 700 },
+    { name: '地狱', cops: 2, allowAdj: true,  tries: 600 }
+  ];
+  var DIFF_LAYOUTS = [
+    [0, 1, 4],           /* 简单：4 衙役，胜率高 */
+    [13, 9, 10, 4],      /* 普通：3 衙役，中等 */
+    [7, 3, 6],           /* 困难：3 衙役，必胜开局更稀 */
+    [14, 15, 6]          /* 地狱：2 衔役，窄腰/之字/长堤 */
+  ];
+  var KEY = 'trap-thief.v1';
+
+  /* ---------- 栈桥图 ---------- */
+  var LAYOUTS = [
+    { name: '三角小码头',
+      nodes: [[0.50,0.07],[0.28,0.26],[0.50,0.26],[0.72,0.26],[0.16,0.48],[0.38,0.48],[0.62,0.48],[0.84,0.48],[0.28,0.72],[0.50,0.72],[0.72,0.72]],
+      edges: [[0,1],[0,2],[0,3],[1,2],[2,3],[1,4],[1,5],[2,5],[2,6],[3,6],[3,7],[4,5],[5,6],[6,7],[4,8],[5,8],[5,9],[6,9],[6,10],[7,10],[8,9],[9,10]],
+      escapes: [8,10] },
+    { name: '木架方亭',
+      nodes: [[0.22,0.12],[0.50,0.12],[0.78,0.12],[0.22,0.38],[0.50,0.38],[0.78,0.38],[0.14,0.62],[0.38,0.62],[0.62,0.62],[0.86,0.62],[0.26,0.86],[0.50,0.86],[0.74,0.86]],
+      edges: [[0,1],[1,2],[0,3],[1,4],[2,5],[3,4],[4,5],[0,4],[2,4],[3,6],[3,7],[4,7],[4,8],[5,8],[5,9],[6,7],[7,8],[8,9],[6,10],[7,10],[7,11],[8,11],[8,12],[9,12],[10,11],[11,12]],
+      escapes: [10,12] },
+    { name: '人字栈桥',
+      nodes: [[0.50,0.06],[0.32,0.22],[0.68,0.22],[0.18,0.40],[0.50,0.40],[0.82,0.40],[0.28,0.58],[0.50,0.58],[0.72,0.58],[0.14,0.78],[0.38,0.78],[0.62,0.78],[0.86,0.78]],
+      edges: [[0,1],[0,2],[1,2],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[4,6],[4,7],[4,8],[5,8],[6,7],[7,8],[6,9],[6,10],[7,10],[7,11],[8,11],[8,12],[9,10],[10,11],[11,12]],
+      escapes: [9,12] },
+    { name: '双层码头',
+      nodes: [[0.18,0.10],[0.42,0.10],[0.66,0.10],[0.28,0.28],[0.52,0.28],[0.76,0.28],[0.16,0.46],[0.40,0.46],[0.64,0.46],[0.88,0.46],[0.28,0.66],[0.52,0.66],[0.76,0.66],[0.40,0.86],[0.64,0.86]],
+      edges: [[0,1],[1,2],[0,3],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[3,7],[4,7],[4,8],[5,8],[5,9],[6,7],[7,8],[8,9],[6,10],[7,10],[7,11],[8,11],[8,12],[9,12],[10,11],[11,12],[10,13],[11,13],[11,14],[12,14],[13,14]],
+      escapes: [13,14] },
+    { name: '环礁平台',
+      nodes: [[0.50,0.08],[0.26,0.22],[0.74,0.22],[0.14,0.46],[0.50,0.34],[0.86,0.46],[0.26,0.68],[0.50,0.58],[0.74,0.68],[0.38,0.88],[0.62,0.88]],
+      edges: [[0,1],[0,2],[0,4],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[4,6],[4,7],[4,8],[5,8],[6,7],[7,8],[6,9],[7,9],[7,10],[8,10],[9,10]],
+      escapes: [9,10] },
+    { name: '十字浮桥',
+      nodes: [[0.50,0.08],[0.30,0.24],[0.50,0.24],[0.70,0.24],[0.12,0.42],[0.34,0.42],[0.50,0.42],[0.66,0.42],[0.88,0.42],[0.30,0.62],[0.50,0.62],[0.70,0.62],[0.20,0.84],[0.50,0.84],[0.80,0.84]],
+      edges: [[0,2],[1,2],[2,3],[0,1],[0,3],[1,4],[1,5],[2,5],[2,6],[3,6],[3,7],[4,5],[5,6],[6,7],[7,8],[4,9],[5,9],[5,10],[6,10],[6,11],[7,11],[8,11],[9,10],[10,11],[9,12],[10,12],[10,13],[10,14],[11,14],[12,13],[13,14]],
+      escapes: [12,14] },
+    { name: '长堤折线',
+      nodes: [[0.20,0.08],[0.48,0.08],[0.76,0.08],[0.32,0.26],[0.60,0.26],[0.16,0.44],[0.44,0.44],[0.72,0.44],[0.28,0.64],[0.56,0.64],[0.84,0.64],[0.20,0.86],[0.48,0.86],[0.76,0.86]],
+      edges: [[0,1],[1,2],[0,3],[1,3],[1,4],[2,4],[3,4],[3,5],[3,6],[4,6],[4,7],[5,6],[6,7],[5,8],[6,8],[6,9],[7,9],[7,10],[8,9],[9,10],[8,11],[8,12],[9,12],[9,13],[10,13],[11,12],[12,13]],
+      escapes: [11,13] },
+    { name: '三角叠塔',
+      nodes: [[0.50,0.05],[0.36,0.20],[0.64,0.20],[0.22,0.36],[0.50,0.36],[0.78,0.36],[0.14,0.54],[0.38,0.54],[0.62,0.54],[0.86,0.54],[0.26,0.74],[0.50,0.74],[0.74,0.74],[0.38,0.92],[0.62,0.92]],
+      edges: [[0,1],[0,2],[1,2],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[3,7],[4,7],[4,8],[5,8],[5,9],[6,7],[7,8],[8,9],[6,10],[7,10],[7,11],[8,11],[8,12],[9,12],[10,11],[11,12],[10,13],[11,13],[11,14],[12,14],[13,14]],
+      escapes: [13,14] },
+    { name: '窄桥三岔',
+      nodes: [[0.50,0.08],[0.32,0.26],[0.68,0.26],[0.18,0.48],[0.50,0.42],[0.82,0.48],[0.30,0.70],[0.50,0.64],[0.70,0.70],[0.40,0.90],[0.60,0.90]],
+      edges: [[0,1],[0,2],[1,2],[0,4],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[4,6],[4,7],[4,8],[5,8],[6,7],[7,8],[6,9],[7,9],[7,10],[8,10],[9,10]],
+      escapes: [3,5,9,10] },
+    { name: '平台棋盘',
+      nodes: [[0.20,0.14],[0.50,0.14],[0.80,0.14],[0.20,0.40],[0.50,0.40],[0.80,0.40],[0.20,0.66],[0.50,0.66],[0.80,0.66],[0.35,0.90],[0.65,0.90]],
+      edges: [[0,1],[1,2],[0,3],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[4,6],[4,7],[5,7],[5,8],[6,7],[7,8],[6,9],[7,9],[7,10],[8,10],[9,10]],
+      escapes: [9,10] },
+    { name: '独木桥',
+      nodes: [[0.50,0.08],[0.30,0.28],[0.70,0.28],[0.20,0.50],[0.50,0.50],[0.80,0.50],[0.32,0.74],[0.68,0.74],[0.40,0.92],[0.60,0.92]],
+      edges: [[0,1],[0,2],[1,2],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[4,6],[4,7],[5,7],[6,7],[6,8],[7,8],[7,9],[8,9]],
+      escapes: [8,9] },
+    { name: '两侧码头',
+      nodes: [[0.50,0.10],[0.28,0.28],[0.72,0.28],[0.16,0.50],[0.50,0.46],[0.84,0.50],[0.30,0.72],[0.50,0.70],[0.70,0.72],[0.40,0.92],[0.60,0.92]],
+      edges: [[0,1],[0,2],[0,4],[1,2],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5],[3,6],[4,6],[4,7],[4,8],[5,8],[6,7],[7,8],[6,9],[7,9],[7,10],[8,10],[9,10]],
+      escapes: [3,5,9,10] },
+    { name: '漏斗栈桥',
+      nodes: [[0.50,0.06],[0.28,0.22],[0.72,0.22],[0.50,0.36],[0.26,0.52],[0.74,0.52],[0.18,0.72],[0.50,0.72],[0.82,0.72],[0.34,0.92],[0.66,0.92]],
+      edges: [[0,1],[0,2],[0,3],[1,2],[1,3],[2,3],[3,4],[3,5],[4,5],[4,6],[4,7],[5,7],[5,8],[6,7],[7,8],[6,9],[7,9],[7,10],[8,10],[9,10]],
+      escapes: [9,10] },
+    { name: '梳子码头',
+      nodes: [[0.14,0.22],[0.38,0.22],[0.62,0.22],[0.86,0.22],[0.14,0.52],[0.38,0.52],[0.62,0.52],[0.86,0.52],[0.22,0.82],[0.50,0.82],[0.78,0.82]],
+      edges: [[0,1],[1,2],[2,3],[0,4],[1,5],[2,6],[3,7],[4,5],[5,6],[6,7],[4,8],[5,8],[5,9],[6,9],[6,10],[7,10],[8,9],[9,10]],
+      escapes: [8,10] },
+    { name: '双亭窄腰',
+      nodes: [[0.30,0.08],[0.70,0.08],[0.20,0.28],[0.50,0.22],[0.80,0.28],[0.50,0.46],[0.28,0.64],[0.72,0.64],[0.20,0.86],[0.50,0.82],[0.80,0.86]],
+      edges: [[0,2],[0,3],[1,3],[1,4],[2,3],[3,4],[2,5],[3,5],[4,5],[5,6],[5,7],[6,7],[6,8],[6,9],[7,9],[7,10],[8,9],[9,10]],
+      escapes: [8,10] },
+    { name: '之字木桥',
+      nodes: [[0.22,0.10],[0.55,0.14],[0.80,0.08],[0.40,0.34],[0.72,0.36],[0.22,0.56],[0.55,0.58],[0.84,0.52],[0.32,0.80],[0.62,0.82],[0.82,0.90]],
+      edges: [[0,1],[1,2],[0,3],[1,3],[1,4],[2,4],[3,4],[3,5],[3,6],[4,6],[4,7],[5,6],[6,7],[5,8],[6,8],[6,9],[7,9],[7,10],[8,9],[9,10]],
+      escapes: [8,10] }
+  ];
+
+  /* ---------- dom ---------- */
+  var cv = document.getElementById('cv');
+  var ctx = cv.getContext('2d');
+  var wrap = document.getElementById('wrap');
+  var elLv = document.getElementById('lv');
+  var elMv = document.getElementById('mv');
+  var elSub = document.getElementById('sub');
+  var elMask = document.getElementById('mask');
+  var elMt = document.getElementById('mt');
+  var elMp = document.getElementById('mp');
+  var elToast = document.getElementById('toast');
+  var elRotate = document.getElementById('rotate');
+  var elChips = document.getElementById('chips');
+  var btnSnd = document.getElementById('snd');
+  var btnGo = document.getElementById('go');
+
+  /* ---------- 状态 ---------- */
+  var W = 0, H = 0, DPR = 1;
+  var diff = 0, lvArr = [1, 1, 1, 1], pfArr = [0, 0, 0, 0], soundOn = true;
+  var layoutIdx = 0, layout = null, adj = [], escapeSet = [];
+  var officers = [], thief = 0, sel = -1, legal = [];
+  var moves = 0, phase = 'idle';
+  var anim = null, hintMove = null, hintT = 0;
+  var nearEscFlag = false, won = false, lost = false;
+  var nodeR = 18, ox = 0, oy = 0, sx = 1, sy = 1;
+  var confetti = [], rings = [], toastTimer = 0, aiTimer = 0;
+  var seedState = 1;
+  var analysisCache = {};
+
+  /* ---------- 工具 ---------- */
+  function mulberry32(a) {
+    return function () {
+      a |= 0; a = (a + 0x6D2B79F5) | 0;
+      var t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  function shuffle(arr, rnd) {
+    var i, j, t;
+    for (i = arr.length - 1; i > 0; i--) {
+      j = (rnd() * (i + 1)) | 0;
+      t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+  function toast(msg) {
+    elToast.textContent = msg;
+    elToast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { elToast.classList.remove('show'); }, 1700);
+  }
+  function nodeXY(i) {
+    return [ox + layout.nodes[i][0] * sx, oy + layout.nodes[i][1] * sy];
+  }
+  function sortedKey(off, thiefPos, turn) {
+    return off.slice().sort(function (a, b) { return a - b; }).join(',') + '|' + thiefPos + '|' + turn;
+  }
+
+  /* ---------- 图与规则 ---------- */
+  function buildAdj(nodes, edges) {
+    var a = [], i;
+    for (i = 0; i < nodes.length; i++) a.push([]);
+    for (i = 0; i < edges.length; i++) {
+      a[edges[i][0]].push(edges[i][1]);
+      a[edges[i][1]].push(edges[i][0]);
+    }
+    return a;
+  }
+  function buildEscape(nodes, escapes) {
+    var s = [], i;
+    for (i = 0; i < nodes.length; i++) s.push(0);
+    for (i = 0; i < escapes.length; i++) s[escapes[i]] = 1;
+    return s;
+  }
+  function occupied(off, thiefPos) {
+    var o = {}, i;
+    for (i = 0; i < off.length; i++) o[off[i]] = i;
+    if (thiefPos >= 0) o[thiefPos] = -2;
+    return o;
+  }
+  function thiefMovesFrom(pos, off) {
+    var o = occupied(off, -1), nb = adj[pos], out = [], i;
+    for (i = 0; i < nb.length; i++) if (o[nb[i]] === undefined) out.push(nb[i]);
+    return out;
+  }
+  function copMovesFrom(off, thiefPos) {
+    var o = occupied(off, thiefPos), out = [], i, j, nb;
+    for (i = 0; i < off.length; i++) {
+      nb = adj[off[i]];
+      for (j = 0; j < nb.length; j++) {
+        if (o[nb[j]] === undefined) out.push({ from: i, to: nb[j] });
+      }
+    }
+    return out;
+  }
+  function applyCopMove(off, mv) {
+    var n = off.slice();
+    n[mv.from] = mv.to;
+    return n;
+  }
+  function nearEscape(pos) {
+    var nb = adj[pos], i;
+    for (i = 0; i < nb.length; i++) if (escapeSet[nb[i]]) return true;
+    return false;
+  }
+  function bfsToEscape(from, off) {
+    if (escapeSet[from]) return 0;
+    var blocked = occupied(off, -1), q = [from], dist = {}, head = 0, nb, i, nx2;
+    dist[from] = 0;
+    while (head < q.length) {
+      var cur = q[head++];
+      nb = adj[cur];
+      for (i = 0; i < nb.length; i++) {
+        nx2 = nb[i];
+        if (dist[nx2] !== undefined) continue;
+        if (blocked[nx2]) continue;
+        dist[nx2] = dist[cur] + 1;
+        if (escapeSet[nx2]) return dist[nx2];
+        q.push(nx2);
+      }
+    }
+    return 99;
+  }
+
+  /* ---------- 不动点求解：衙役必胜集 ----------
+     毛贼逃上船 = 败；毛贼无路可走 = 胜。
+     自环局面按「不能在有限步内强制抓获」处理，不计入必胜。 */
+  function analyze(L, cops) {
+    var lad = buildAdj(L.nodes, L.edges);
+    var n = L.nodes.length;
+    var esc = buildEscape(L.nodes, L.escapes);
+    var i, j, ci, t;
+    var combs = [];
+    (function rec(start, cur) {
+      if (cur.length === cops) { combs.push(cur.slice()); return; }
+      for (var i = start; i < n; i++) { cur.push(i); rec(i + 1, cur); cur.pop(); }
+    })(0, []);
+
+    function thiefMv(thiefPos, occSet) {
+      var out = [], nb = lad[thiefPos], i;
+      for (i = 0; i < nb.length; i++) if (!occSet[nb[i]]) out.push(nb[i]);
+      return out;
+    }
+    function copMv(occArr, occSet, thiefPos) {
+      var out = [], i, j, nb, to;
+      for (i = 0; i < occArr.length; i++) {
+        nb = lad[occArr[i]];
+        for (j = 0; j < nb.length; j++) {
+          to = nb[j];
+          if (to === thiefPos || occSet[to]) continue;
+          out.push({ from: i, to: to });
+        }
+      }
+      return out;
+    }
+
+    var copWin = {}, copStates = [], robStates = [];
+    var rank = {};
+    for (ci = 0; ci < combs.length; ci++) {
+      var occ = combs[ci], occSet = {};
+      for (i = 0; i < occ.length; i++) occSet[occ[i]] = 1;
+      for (t = 0; t < n; t++) {
+        if (occSet[t] || esc[t]) continue;
+        var tm = thiefMv(t, occSet);
+        var rk = sortedKey(occ, t, 1);
+        if (tm.length === 0) { copWin[rk] = 1; rank[rk] = 0; }
+        else robStates.push({ key: rk, occ: occ, thief: t, moves: tm });
+        copStates.push({ key: sortedKey(occ, t, 0), occ: occ, thief: t });
+      }
+    }
+    function occSetOf(occArr) {
+      var s = {}, i;
+      for (i = 0; i < occArr.length; i++) s[occArr[i]] = 1;
+      return s;
+    }
+    var changed = true, guard = 0, st, rs, ms, no, all, dest;
+    while (changed && guard++ < 80) {
+      changed = false;
+      for (i = 0; i < copStates.length; i++) {
+        st = copStates[i];
+        if (copWin[st.key]) continue;
+        ms = copMv(st.occ, occSetOf(st.occ), st.thief);
+        for (j = 0; j < ms.length; j++) {
+          no = st.occ.slice();
+          no[ms[j].from] = ms[j].to;
+          if (copWin[sortedKey(no, st.thief, 1)]) { copWin[st.key] = 1; changed = true; break; }
+        }
+      }
+      for (i = 0; i < robStates.length; i++) {
+        rs = robStates[i];
+        if (copWin[rs.key]) continue;
+        all = true;
+        for (j = 0; j < rs.moves.length; j++) {
+          dest = rs.moves[j];
+          if (esc[dest]) { all = false; break; }
+          if (!copWin[sortedKey(rs.occ, dest, 0)]) { all = false; break; }
+        }
+        if (all && rs.moves.length) { copWin[rs.key] = 1; changed = true; }
+      }
+    }
+
+    /* 必胜秩：衙役还需几步才能强制收网（毛贼尽量拖延）。
+       提示只给降秩着法，避免在必胜集里空转。 */
+    var rchanged = true, rguard = 0, cand, succ, anyR, minR;
+    while (rchanged && rguard++ < 80) {
+      rchanged = false;
+      for (i = 0; i < robStates.length; i++) {
+        rs = robStates[i];
+        if (!copWin[rs.key] || rank[rs.key] === 0) continue;
+        all = true; cand = 0;
+        for (j = 0; j < rs.moves.length; j++) {
+          dest = rs.moves[j];
+          succ = sortedKey(rs.occ, dest, 0);
+          if (rank[succ] === undefined) { all = false; break; }
+          if (rank[succ] > cand) cand = rank[succ];
+        }
+        if (all && (rank[rs.key] === undefined || cand < rank[rs.key])) {
+          rank[rs.key] = cand; rchanged = true;
+        }
+      }
+      for (i = 0; i < copStates.length; i++) {
+        st = copStates[i];
+        if (!copWin[st.key]) continue;
+        ms = copMv(st.occ, occSetOf(st.occ), st.thief);
+        anyR = false; minR = 1e9;
+        for (j = 0; j < ms.length; j++) {
+          no = st.occ.slice();
+          no[ms[j].from] = ms[j].to;
+          succ = sortedKey(no, st.thief, 1);
+          if (rank[succ] === undefined) continue;
+          anyR = true;
+          if (rank[succ] < minR) minR = rank[succ];
+        }
+        if (anyR) {
+          cand = minR + 1;
+          if (rank[st.key] === undefined || cand < rank[st.key]) {
+            rank[st.key] = cand; rchanged = true;
+          }
+        }
+      }
+    }
+
+    return {
+      copWin: copWin,
+      rank: rank,
+      isCopWin: function (off, thiefPos, turn) {
+        return !!copWin[sortedKey(off, thiefPos, turn)];
+      },
+      rankOf: function (off, thiefPos, turn) {
+        var r = rank[sortedKey(off, thiefPos, turn)];
+        return r === undefined ? 1e9 : r;
+      }
+    };
+  }
+  function getAnalysis(idx, cops) {
+    var key = idx + ':' + cops;
+    if (!analysisCache[key]) analysisCache[key] = analyze(LAYOUTS[idx], cops);
+    return analysisCache[key];
+  }
+
+  /* ---------- 毛贼 AI ---------- */
+  function thiefAI(thiefPos, off, rnd) {
+    var ms = thiefMovesFrom(thiefPos, off), i, j, m, s, best = [], bestScore = -1e9, de, free, doff, d;
+    if (!ms.length) return -1;
+    for (i = 0; i < ms.length; i++) {
+      m = ms[i];
+      if (escapeSet[m]) return m;
+      de = bfsToEscape(m, off);
+      free = thiefMovesFrom(m, off).length;
+      doff = 99;
+      for (j = 0; j < off.length; j++) {
+        d = bfsToEscape(off[j], off); /* 占位：下面用邻接 BFS */
+      }
+      doff = 0;
+      {
+        var q = [m], dist = {}, head = 0, occ = occupied(off, -1), nb, nx2, bestD = 99;
+        dist[m] = 0;
+        while (head < q.length) {
+          var cur = q[head++];
+          nb = adj[cur];
+          for (j = 0; j < nb.length; j++) {
+            nx2 = nb[j];
+            if (dist[nx2] !== undefined) continue;
+            if (occ[nx2] !== undefined && occ[nx2] !== -2) {
+              dist[nx2] = dist[cur] + 1;
+              if (dist[nx2] < bestD) bestD = dist[nx2];
+              continue;
+            }
+            if (occ[nx2] !== undefined) continue;
+            dist[nx2] = dist[cur] + 1;
+            q.push(nx2);
+          }
+        }
+        doff = bestD;
+      }
+      s = -de * 14 + free * 7 + Math.min(doff, 8) * 2.5 + rnd() * 3;
+      if (de >= 99) s -= 40;
+      if (s > bestScore + 0.05) { bestScore = s; best = [m]; }
+      else if (Math.abs(s - bestScore) <= 0.05) best.push(m);
+    }
+    return best[(rnd() * best.length) | 0];
+  }
+
+  /* ---------- 关卡生成 ---------- */
+  function tryGenerate(df, lv) {
+    var cfg = LEVELS[df];
+    var cops = cfg.cops;
+    var idxs = DIFF_LAYOUTS[df];
+    var idx = idxs[lv % idxs.length];
+    var L = LAYOUTS[idx];
+    var an = getAnalysis(idx, cops);
+    var n = L.nodes.length;
+    var lad = buildAdj(L.nodes, L.edges);
+    var esc = buildEscape(L.nodes, L.escapes);
+    var pool = [], i;
+    for (i = 0; i < n; i++) if (!esc[i]) pool.push(i);
+    var rnd = mulberry32(((df + 5) * 8111 + lv * 977 + n * 31 + idx * 101 + 20260920) | 0);
+
+    function nearEsc(pos) {
+      var nb = lad[pos], i;
+      for (i = 0; i < nb.length; i++) if (esc[nb[i]]) return true;
+      return false;
+    }
+
+    for (var att = 0; att < cfg.tries; att++) {
+      var order = shuffle(pool.slice(), rnd);
+      var thiefPos = order[0];
+      if (!cfg.allowAdj && nearEsc(thiefPos)) continue;
+      var used = {}, off = [], k, pick;
+      used[thiefPos] = 1;
+      for (k = 0; k < cops; k++) {
+        pick = -1;
+        for (i = 1; i < order.length; i++) if (!used[order[i]]) { pick = order[i]; break; }
+        if (pick < 0) break;
+        off.push(pick); used[pick] = 1;
+      }
+      if (off.length < cops) continue;
+      var occ = {}, tm;
+      for (i = 0; i < off.length; i++) occ[off[i]] = 1;
+      tm = lad[thiefPos].filter(function (x) { return !occ[x]; });
+      if (!tm.length) continue;
+      if (an.isCopWin(off, thiefPos, 0)) {
+        return { idx: idx, layout: L, officers: off, thief: thiefPos, cops: cops };
+      }
+    }
+    return null;
+  }
+
+  function newGame() {
+    clearTimeout(aiTimer);
+    var g = null, tries = 0, lvTry = lvArr[diff];
+    while (!g && tries < 12) {
+      g = tryGenerate(diff, lvTry);
+      if (!g) { lvTry = (lvTry % 97) + 1; tries++; }
+    }
+    if (!g) {
+      /* 兜底：木架方亭 + 4 衙役常见可解摆位邻域再扫一遍 */
+      layoutIdx = 1;
+      layout = LAYOUTS[1];
+      adj = buildAdj(layout.nodes, layout.edges);
+      escapeSet = buildEscape(layout.nodes, layout.escapes);
+      var an = getAnalysis(1, 4);
+      var found = null, rnd = mulberry32(424242), att, order, thiefPos, off, used, i, k, pick, occ;
+      for (att = 0; att < 500 && !found; att++) {
+        order = shuffle([0,1,2,3,4,5,6,7,8,9,10,11,12], rnd);
+        thiefPos = order[0];
+        used = {}; off = [];
+        used[thiefPos] = 1;
+        for (k = 0; k < 4; k++) {
+          pick = -1;
+          for (i = 1; i < order.length; i++) if (!used[order[i]]) { pick = order[i]; break; }
+          if (pick < 0) break;
+          off.push(pick); used[pick] = 1;
+        }
+        if (off.length < 4) continue;
+        occ = {};
+        for (i = 0; i < off.length; i++) occ[off[i]] = 1;
+        if (!adj[thiefPos].filter(function (x) { return !occ[x]; }).length) continue;
+        if (an.isCopWin(off, thiefPos, 0)) found = { officers: off, thief: thiefPos };
+      }
+      officers = found ? found.officers.slice() : [3, 5, 7, 9];
+      thief = found ? found.thief : 0;
+    } else {
+      layoutIdx = g.idx;
+      layout = g.layout;
+      adj = buildAdj(layout.nodes, layout.edges);
+      escapeSet = buildEscape(layout.nodes, layout.escapes);
+      officers = g.officers.slice();
+      thief = g.thief;
+    }
+    sel = -1; legal = [];
+    moves = 0; phase = 'pick';
+    anim = null; hintMove = null;
+    nearEscFlag = nearEscape(thief);
+    won = false; lost = false;
+    confetti = []; rings = [];
+    elMask.classList.remove('show');
+    resize();
+    hud();
+  }
+
+  /* ---------- 音效 ---------- */
+  var actx = null;
+  function ac() {
+    try {
+      if (!actx) {
+        var AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return null;
+        actx = new AC();
+      }
+      if (actx.state === 'suspended') actx.resume();
+      return actx;
+    } catch (e) { return null; }
+  }
+  function tone(freq, dur, type, vol, at) {
+    if (!soundOn) return;
+    var a = ac(); if (!a) return;
+    try {
+      var t0 = a.currentTime + (at || 0);
+      var o = a.createOscillator(), g = a.createGain();
+      o.type = type || 'sine';
+      o.frequency.setValueAtTime(freq, t0);
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.connect(g); g.connect(a.destination);
+      o.start(t0); o.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  }
+  var SFX = {
+    tap: function () { tone(520, 0.04, 'triangle', 0.05); },
+    move: function () { tone(390, 0.06, 'triangle', 0.06); },
+    thief: function () { tone(240, 0.08, 'square', 0.035); },
+    hint: function () { tone(780, 0.12, 'sine', 0.08); },
+    win: function () {
+      var seq = [523, 659, 784, 1047], i;
+      for (i = 0; i < seq.length; i++) tone(seq[i], 0.22, 'sine', 0.11, i * 0.1);
+    },
+    lose: function () { tone(220, 0.12, 'sawtooth', 0.08); tone(160, 0.4, 'sawtooth', 0.08, 0.12); }
+  };
+
+  /* ---------- 存档 ---------- */
+  function save() {
+    try {
+      localStorage.setItem(KEY, JSON.stringify({ v: 1, df: diff, lv: lvArr, pf: pfArr, s: soundOn ? 1 : 0 }));
+    } catch (e) {}
+  }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if (!s || s.v !== 1) return;
+      var i;
+      if (typeof s.df === 'number' && s.df >= 0 && s.df < LEVELS.length) diff = s.df | 0;
+      if (Array.isArray(s.lv) && s.lv.length === LEVELS.length) {
+        for (i = 0; i < s.lv.length; i++)
+          if (typeof s.lv[i] === 'number' && s.lv[i] >= 1) lvArr[i] = Math.min(9999, s.lv[i] | 0);
+      }
+      if (Array.isArray(s.pf) && s.pf.length === LEVELS.length) {
+        for (i = 0; i < s.pf.length; i++)
+          if (typeof s.pf[i] === 'number' && s.pf[i] >= 0) pfArr[i] = Math.min(9999, s.pf[i] | 0);
+      }
+      soundOn = s.s !== 0;
+    } catch (e) {}
+  }
+
+  /* ---------- HUD ---------- */
+  function resize() {
+    DPR = Math.min(3, window.devicePixelRatio || 1);
+    W = wrap.clientWidth || window.innerWidth;
+    H = wrap.clientHeight || Math.round(window.innerHeight * 0.6);
+    cv.width = Math.round(W * DPR);
+    cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (!layout) return;
+    var padX = 30, padY = 36;
+    sx = Math.max(80, W - padX * 2);
+    sy = Math.max(80, H - padY * 2);
+    ox = padX;
+    oy = padY;
+    nodeR = Math.max(10, Math.min(22, Math.min(sx, sy) * 0.058));
+    var TOUCH = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    elRotate.style.display = (TOUCH && window.innerWidth > window.innerHeight) ? 'flex' : 'none';
+  }
+  function hud() {
+    elLv.textContent = lvArr[diff];
+    elMv.textContent = moves;
+    var d = LEVELS[diff];
+    var tip = phase === 'thief' ? '毛贼行动中…'
+      : (phase === 'anim' ? '移动中…'
+      : (sel >= 0 ? '点亮起的节点移动衙役'
+      : (phase === 'over' ? (won ? '毛贼已抓获' : '毛贼逃走了')
+      : '点选一名衙役')));
+    elSub.textContent = d.name + ' · ' + (layout ? layout.name : '') + ' · 衙役×' + officers.length + ' · ' + tip;
+    var btns = elChips.getElementsByTagName('button'), i;
+    for (i = 0; i < btns.length; i++) btns[i].className = (i === diff) ? 'on' : '';
+  }
+
+  /* ---------- 胜负 ---------- */
+  function spawnConfetti() {
+    var c = nodeXY(thief), i;
+    var cols = ['#C45C4A', '#D4A84B', '#9B7B5E', '#6D8798', '#7A8D7C', '#EDE9E3'];
+    for (i = 0; i < 46; i++) {
+      confetti.push({
+        x: c[0], y: c[1],
+        vx: (Math.random() * 2 - 1) * 180,
+        vy: -60 - Math.random() * 200,
+        rot: Math.random() * 6.28, vr: (Math.random() * 2 - 1) * 9,
+        size: 3 + Math.random() * 3.4,
+        life: 1.2 + Math.random() * 0.8,
+        c: cols[(Math.random() * cols.length) | 0]
+      });
+    }
+  }
+  function endWin() {
+    won = true; phase = 'over';
+    var perfect = !nearEscFlag;
+    if (perfect) pfArr[diff]++;
+    save();
+    SFX.win();
+    spawnConfetti();
+    var pt = nodeXY(thief);
+    rings.push({ x: pt[0], y: pt[1], t0: performance.now(), c: '#C45C4A' });
+    hud();
+    setTimeout(function () {
+      elMt.textContent = '第 ' + lvArr[diff] + ' 关 · 抓获毛贼';
+      elMp.textContent = perfect
+        ? '完美围堵：毛贼全程都没能靠近小船！\n本难度完美次数 × ' + pfArr[diff]
+        : '用了 ' + moves + ' 步堵死全部去路。\n让毛贼一步都没靠近过小船，可拿「完美」。';
+      btnGo.textContent = '下一关';
+      elMask.classList.add('show');
+    }, 850);
+  }
+  function moveLimit() {
+    return Math.max(28, (layout ? layout.nodes.length : 10) * 3 + officers.length * 4);
+  }
+  function endLose(reason) {
+    lost = true; phase = 'over';
+    SFX.lose();
+    hud();
+    var msg = reason || '他窜上小船溜走了。\n换条路线截住他——先封船，再收网。';
+    setTimeout(function () {
+      elMt.textContent = '毛贼跑了';
+      elMp.textContent = msg;
+      btnGo.textContent = '再试一次';
+      elMask.classList.add('show');
+    }, 400);
+  }
+  function checkAfterThief() {
+    if (escapeSet[thief]) { endLose(); return; }
+    if (!thiefMovesFrom(thief, officers).length) { endWin(); return; }
+    phase = 'pick';
+    sel = -1; legal = [];
+    hud();
+  }
+  function runThiefTurn() {
+    phase = 'thief';
+    hud();
+    aiTimer = setTimeout(function () {
+      if (phase !== 'thief') return;
+      var rnd = mulberry32((seedState = (seedState * 1664525 + 1013904223) | 0));
+      var dest = thiefAI(thief, officers, rnd);
+      if (dest < 0) { endWin(); return; }
+      /* 先写入落点：动画播完后棋子停在新节点，不会弹回 */
+      anim = { kind: 'thief', from: thief, to: dest, t0: performance.now(), dur: 280 };
+      thief = dest;
+      phase = 'anim';
+      armAnimDone(280);
+      SFX.thief();
+    }, 320);
+  }
+
+  /* ---------- 操作 ---------- */
+  function pickOfficer(i) {
+    if (phase !== 'pick' || won || lost) return;
+    if (i < 0 || i >= officers.length) return;
+    sel = i;
+    var o = occupied(officers, thief), nb = adj[officers[i]], j;
+    legal = [];
+    for (j = 0; j < nb.length; j++) if (o[nb[j]] === undefined) legal.push(nb[j]);
+    SFX.tap();
+    hud();
+  }
+  function tryMoveTo(node) {
+    if (phase !== 'pick' || sel < 0) return;
+    if (legal.indexOf(node) < 0) return;
+    var from = officers[sel];
+    anim = { kind: 'cop', idx: sel, from: from, to: node, t0: performance.now(), dur: 220 };
+    officers[sel] = node;
+    moves++;
+    sel = -1; legal = [];
+    hintMove = null;
+    phase = 'anim';
+    armAnimDone(220);
+    SFX.move();
+    var pt = nodeXY(node);
+    rings.push({ x: pt[0], y: pt[1], t0: performance.now(), c: '#9B7B5E' });
+    if (nearEscape(thief)) nearEscFlag = true;
+    if (moves >= moveLimit()) {
+      hud();
+      anim = null;
+      endLose('衙役来回奔波耗了太多步数，毛贼趁乱跳上小船溜了。\n试试更紧凑的围堵路线。');
+      return;
+    }
+    hud();
+  }
+  function onAnimDone() {
+    if (!anim) return;
+    var wasCop = anim.kind === 'cop';
+    anim = null;
+    if (wasCop) {
+      if (!thiefMovesFrom(thief, officers).length) { endWin(); return; }
+      runThiefTurn();
+    } else {
+      if (nearEscape(thief)) nearEscFlag = true;
+      checkAfterThief();
+    }
+  }
+  /* rAF 可能被后台节流，动画推进用定时器兜底 */
+  function armAnimDone(dur) {
+    setTimeout(function () { if (anim) onAnimDone(); }, dur + 30);
+  }
+  function nearestNode(x, y) {
+    if (!layout) return -1;
+    var best = -1, bestD = nodeR * 2.2, i, p, d;
+    for (i = 0; i < layout.nodes.length; i++) {
+      p = nodeXY(i);
+      d = (p[0] - x) * (p[0] - x) + (p[1] - y) * (p[1] - y);
+      if (d < bestD * bestD) { bestD = Math.sqrt(d); best = i; }
+    }
+    return best;
+  }
+  function posToCanvas(e) {
+    var rect = cv.getBoundingClientRect();
+    return [e.clientX - rect.left, e.clientY - rect.top];
+  }
+
+  cv.addEventListener('pointerdown', function (e) {
+    e.preventDefault();
+    ac();
+    if (phase !== 'pick' || won || lost) return;
+    var pt = posToCanvas(e);
+    var n = nearestNode(pt[0], pt[1]);
+    if (n < 0) return;
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+    var oi = officers.indexOf(n);
+    if (oi >= 0) { pickOfficer(oi); return; }
+    if (sel >= 0 && legal.indexOf(n) >= 0) tryMoveTo(n);
+  }, { passive: false });
+  cv.addEventListener('pointermove', function (e) { e.preventDefault(); }, { passive: false });
+  cv.addEventListener('contextmenu', function (e) { e.preventDefault(); });
+
+  elChips.addEventListener('click', function (e) {
+    var t = e.target;
+    if (!t || t.tagName !== 'BUTTON') return;
+    var i = +t.getAttribute('data-i');
+    if (i === diff) return;
+    ac();
+    diff = i;
+    save();
+    newGame();
+  });
+  document.getElementById('hint').addEventListener('click', function () {
+    ac();
+    if (phase !== 'pick' || won || lost) return;
+    var an = getAnalysis(layoutIdx, officers.length);
+    var ms = copMovesFrom(officers, thief), i, after, best = null, bestRank = 1e9, stall = null, bestScore = -1e9, sc, de, j, rk;
+    for (i = 0; i < ms.length; i++) {
+      after = applyCopMove(officers, ms[i]);
+      rk = an.rankOf(after, thief, 1);
+      if (an.isCopWin(after, thief, 1) && rk < bestRank) { bestRank = rk; best = ms[i]; }
+      sc = 0;
+      for (j = 0; j < after.length; j++) sc += bfsToEscape(after[j], after) * 2;
+      de = bfsToEscape(thief, after);
+      sc += de * 8;
+      if (sc > bestScore) { bestScore = sc; stall = ms[i]; }
+    }
+    var mv = best || stall;
+    if (!mv) { toast('这会儿动不了，试试别的衙役'); return; }
+    hintMove = mv;
+    hintT = performance.now();
+    SFX.hint();
+    toast(best ? '让这名衙役走到亮圈处，离收网更近一步' : '暂时找不到必胜着，先封住靠船的方向');
+  });
+  document.getElementById('reset').addEventListener('click', function () { ac(); newGame(); });
+  document.getElementById('skip').addEventListener('click', function () {
+    ac();
+    lvArr[diff] = Math.min(9999, lvArr[diff] + 1);
+    save();
+    newGame();
+  });
+  btnGo.addEventListener('click', function () {
+    ac();
+    var label = btnGo.textContent;
+    btnGo.textContent = '开始';
+    if (label === '下一关') lvArr[diff] = Math.min(9999, lvArr[diff] + 1);
+    save();
+    newGame();
+  });
+  btnSnd.addEventListener('click', function () {
+    soundOn = !soundOn;
+    btnSnd.style.opacity = soundOn ? 1 : 0.38;
+    ac();
+    save();
+  });
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', function () { setTimeout(resize, 220); });
+
+  /* ---------- 绘制 ---------- */
+  function drawWater(t) {
+    var g = ctx.createLinearGradient(0, 0, 0, H);
+    g.addColorStop(0, '#93B4C8');
+    g.addColorStop(0.45, '#7FA6BC');
+    g.addColorStop(1, '#6E93AA');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+    ctx.lineWidth = 1.2;
+    var i, y0, x, y;
+    for (i = 0; i < 6; i++) {
+      ctx.strokeStyle = 'rgba(255,255,255,' + (0.07 + (i % 3) * 0.03) + ')';
+      ctx.beginPath();
+      y0 = H * (0.12 + i * 0.15);
+      for (x = 0; x <= W; x += 7) {
+        y = y0 + Math.sin(x * 0.021 + t * 1.4 + i * 1.7) * 3.5 + Math.sin(x * 0.009 - t * 0.8 + i) * 2;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+  }
+  function drawBeam(x1, y1, x2, y2, w) {
+    ctx.lineCap = 'round';
+    ctx.strokeStyle = '#8A6A3E';
+    ctx.lineWidth = w + 2.2;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.strokeStyle = '#C9A66B';
+    ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,236,196,.4)';
+    ctx.lineWidth = Math.max(1.5, w * 0.32);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1 - w * 0.16); ctx.lineTo(x2, y2 - w * 0.16);
+    ctx.stroke();
+  }
+  function drawBoat(x, y, s) {
+    ctx.save();
+    ctx.fillStyle = '#8C5A3C';
+    ctx.beginPath();
+    ctx.moveTo(x - s, y - s * 0.1);
+    ctx.quadraticCurveTo(x - s * 0.2, y + s * 0.75, x + s, y - s * 0.05);
+    ctx.quadraticCurveTo(x, y + s * 0.22, x - s, y - s * 0.1);
+    ctx.fill();
+    ctx.fillStyle = '#B88354';
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.85, y - s * 0.05);
+    ctx.quadraticCurveTo(x, y + s * 0.55, x + s * 0.85, y - s * 0.02);
+    ctx.quadraticCurveTo(x, y + s * 0.16, x - s * 0.85, y - s * 0.05);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(60,40,25,.25)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.7, y + s * 0.08);
+    ctx.quadraticCurveTo(x, y + s * 0.48, x + s * 0.7, y + s * 0.08);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function drawNode(x, y, r, isEsc) {
+    var g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.12, x, y, r);
+    if (isEsc) { g.addColorStop(0, '#F7E2B8'); g.addColorStop(1, '#D2B07A'); }
+    else { g.addColorStop(0, '#F6EEDC'); g.addColorStop(1, '#D8C7A6'); }
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = g; ctx.fill();
+    ctx.lineWidth = Math.max(1.5, r * 0.14);
+    ctx.strokeStyle = isEsc ? '#A8844E' : '#A89070';
+    ctx.stroke();
+  }
+  function drawLegal(x, y, r, t) {
+    var pulse = 0.72 + Math.sin(t * 5) * 0.18;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.72, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(122,141,124,' + (0.28 * pulse) + ')';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x, y, r * 0.72, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(122,141,124,' + (0.7 * pulse) + ')';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  function drawOfficer(x, y, s, selected, t) {
+    if (selected) {
+      ctx.beginPath();
+      ctx.arc(x, y, s * 1.35 + Math.sin(t * 6) * s * 0.08, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(212,168,75,.85)';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#D4A84B';
+    ctx.beginPath();
+    rr(x - s * 0.42, y - s * 0.05, s * 0.84, s * 0.78, s * 0.22);
+    ctx.fill();
+    ctx.fillStyle = '#3F4A41';
+    ctx.fillRect(x - s * 0.42, y + s * 0.38, s * 0.84, s * 0.12);
+    ctx.fillStyle = '#E8C9A8';
+    ctx.beginPath(); ctx.arc(x, y - s * 0.28, s * 0.32, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#4A4741';
+    ctx.beginPath();
+    ctx.arc(x - s * 0.12, y - s * 0.30, s * 0.05, 0, Math.PI * 2);
+    ctx.arc(x + s * 0.12, y - s * 0.30, s * 0.05, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#C45C4A';
+    ctx.beginPath();
+    ctx.moveTo(x, y - s * 0.95);
+    ctx.lineTo(x - s * 0.52, y - s * 0.40);
+    ctx.lineTo(x + s * 0.52, y - s * 0.40);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#A84A3A';
+    ctx.fillRect(x - s * 0.58, y - s * 0.44, s * 1.16, s * 0.1);
+    ctx.fillStyle = '#E8C9A8';
+    ctx.beginPath(); ctx.arc(x, y - s * 0.42, s * 0.07, 0, Math.PI * 2); ctx.fill();
+  }
+  function drawThief(x, y, s) {
+    ctx.fillStyle = '#3A3835';
+    ctx.beginPath();
+    rr(x - s * 0.4, y - s * 0.1, s * 0.8, s * 0.85, s * 0.28);
+    ctx.fill();
+    ctx.fillStyle = '#C4B49A';
+    ctx.beginPath(); ctx.arc(x, y - s * 0.28, s * 0.30, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2A2826';
+    ctx.fillRect(x - s * 0.34, y - s * 0.38, s * 0.68, s * 0.16);
+    ctx.fillStyle = '#EDE9E3';
+    ctx.beginPath();
+    ctx.arc(x - s * 0.12, y - s * 0.30, s * 0.045, 0, Math.PI * 2);
+    ctx.arc(x + s * 0.12, y - s * 0.30, s * 0.045, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#2F2D2B';
+    ctx.beginPath();
+    ctx.arc(x, y - s * 0.48, s * 0.38, Math.PI, 0);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x - s * 0.38, y - s * 0.48);
+    ctx.quadraticCurveTo(x, y - s * 0.95, x + s * 0.38, y - s * 0.48);
+    ctx.fill();
+  }
+  function drawHint(x, y, r) {
+    var age = (performance.now() - hintT) / 1000;
+    var a = 0.35 + Math.sin(age * 6) * 0.25;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 1.05 + Math.sin(age * 5) * r * 0.08, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(196,92,74,' + a + ')';
+    ctx.lineWidth = 3.5;
+    ctx.stroke();
+  }
+  function rr(x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+  function piecePos(from, to, k) {
+    var a = nodeXY(from), b = nodeXY(to);
+    return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+  }
+  function draw(t) {
+    if (!layout) return;
+    ctx.clearRect(0, 0, W, H);
+    drawWater(t);
+    var i, e, a, b, p;
+    for (i = 0; i < layout.nodes.length; i++) {
+      if (!escapeSet[i]) continue;
+      p = nodeXY(i);
+      drawBoat(p[0], p[1] + nodeR * 1.15, nodeR * 1.05);
+    }
+    for (i = 0; i < layout.edges.length; i++) {
+      e = layout.edges[i];
+      a = nodeXY(e[0]); b = nodeXY(e[1]);
+      drawBeam(a[0], a[1], b[0], b[1], Math.max(4, nodeR * 0.42));
+    }
+    if (sel >= 0 && phase === 'pick') {
+      for (i = 0; i < legal.length; i++) {
+        p = nodeXY(legal[i]);
+        drawLegal(p[0], p[1], nodeR, t);
+      }
+    }
+    for (i = 0; i < layout.nodes.length; i++) {
+      p = nodeXY(i);
+      drawNode(p[0], p[1], nodeR, !!escapeSet[i]);
+    }
+    if (hintMove && phase === 'pick') {
+      p = nodeXY(officers[hintMove.from]);
+      drawHint(p[0], p[1], nodeR);
+      p = nodeXY(hintMove.to);
+      drawHint(p[0], p[1], nodeR);
+    }
+    for (i = rings.length - 1; i >= 0; i--) {
+      var age = (performance.now() - rings[i].t0) / 450;
+      if (age >= 1) { rings.splice(i, 1); continue; }
+      ctx.beginPath();
+      ctx.arc(rings[i].x, rings[i].y, nodeR * (0.5 + age * 1.6), 0, Math.PI * 2);
+      ctx.strokeStyle = rings[i].c;
+      ctx.globalAlpha = 0.45 * (1 - age);
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+    var s = nodeR * 0.95;
+    var copPos = [], thiefPos = nodeXY(thief);
+    for (i = 0; i < officers.length; i++) copPos.push(nodeXY(officers[i]));
+    if (anim) {
+      var k = Math.min(1, (performance.now() - anim.t0) / anim.dur);
+      var ease = k < 0.5 ? 2 * k * k : -1 + (4 - 2 * k) * k;
+      if (anim.kind === 'cop') copPos[anim.idx] = piecePos(anim.from, anim.to, ease);
+      else thiefPos = piecePos(anim.from, anim.to, ease);
+      if (k >= 1) onAnimDone();
+    }
+    for (i = 0; i < officers.length; i++) {
+      drawOfficer(copPos[i][0], copPos[i][1] - s * 0.15, s, sel === i, t);
+    }
+    drawThief(thiefPos[0], thiefPos[1] - s * 0.15, s);
+    for (i = confetti.length - 1; i >= 0; i--) {
+      var f = confetti[i];
+      ctx.save();
+      ctx.translate(f.x, f.y);
+      ctx.rotate(f.rot);
+      ctx.globalAlpha = Math.max(0, Math.min(1, f.life));
+      ctx.fillStyle = f.c;
+      ctx.fillRect(-f.size / 2, -f.size / 2, f.size, f.size * 0.62);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function step(dt) {
+    var i, f;
+    for (i = confetti.length - 1; i >= 0; i--) {
+      f = confetti[i];
+      f.vy += 460 * dt;
+      f.x += f.vx * dt; f.y += f.vy * dt;
+      f.rot += f.vr * dt;
+      f.life -= dt;
+      if (f.life <= 0) confetti.splice(i, 1);
+    }
+  }
+
+  /* ---------- 启动 ---------- */
+  load();
+  btnSnd.style.opacity = soundOn ? 1 : 0.38;
+  layoutIdx = 0;
+  layout = LAYOUTS[0];
+  adj = buildAdj(layout.nodes, layout.edges);
+  escapeSet = buildEscape(layout.nodes, layout.escapes);
+  officers = [3, 5, 7, 9];
+  thief = 0;
+  resize();
+
+  var lastT = 0;
+  function frame(ts) {
+    var t = ts / 1000, dt = lastT ? Math.min(0.05, t - lastT) : 0.016;
+    lastT = t;
+    step(dt);
+    draw(t);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
